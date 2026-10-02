@@ -21,7 +21,7 @@ from backend.models import ClaimVerificationResult, RelevancyDecision, RouterDec
 from backend.vector_store import search as vs_search
 
 load_dotenv()
-llm = ChatGroq(model="llama-3.1-8b-instant")
+llm = ChatGroq(model="llama-3.1-8b-instant", request_timeout=30, max_retries=1)
 
 
 # ── State ─────────────────────────────────────────────────────────────────────
@@ -334,52 +334,59 @@ def verify_claim_node(state: RAGState) -> dict:
 def generate_answer_node(state: RAGState) -> dict:
     route = state.get("route")
     query = state["query"]
+    answer = "I was unable to generate a response. Please try again."
 
-    if route == "retrieve":
-        if state.get("is_relevant") is False and state.get("rewrite_count", 0) >= 1:
-            answer = (
-                "I wasn't able to find relevant information in the uploaded papers "
-                "to answer your question. You may want to rephrase your question "
-                "or upload additional papers."
-            )
-        else:
-            docs = state.get("retrieved_docs") or []
-            if not docs:
-                answer = "I don't know the answer."
+    try:
+        if route == "retrieve":
+            if state.get("is_relevant") is False and state.get("rewrite_count", 0) >= 1:
+                answer = (
+                    "I wasn't able to find relevant information in the uploaded papers "
+                    "to answer your question. You may want to rephrase your question "
+                    "or upload additional papers."
+                )
             else:
-                context = "\n\n---\n\n".join(doc.page_content for doc in docs)
-                prompt = f"Answer the question using this context:\n\n{context}\n\nQuestion: {query}"
-                answer = llm.invoke([{"role": "user", "content": prompt}]).content
+                docs = state.get("retrieved_docs") or []
+                if not docs:
+                    answer = "No relevant documents were found. Please upload a paper first, then ask a question about it."
+                else:
+                    # Truncate context to avoid token limits (keep max 8000 chars)
+                    raw_context = "\n\n---\n\n".join(doc.page_content for doc in docs)
+                    context = raw_context[:8000]
+                    prompt = f"Answer the question using this context:\n\n{context}\n\nQuestion: {query}"
+                    answer = llm.invoke([{"role": "user", "content": prompt}]).content
 
-    elif route == "verify_claim":
-        verdict = state.get("claim_verdict", "")
-        papers = state.get("superseding_papers") or []
-        claim_text = state["query"]
-        if papers:
-            papers_block = "\n\n".join(
-                f"{i + 1}. **{p['title']}**\n   {p['summary']}\n   Link: {p['url']}"
-                for i, p in enumerate(papers)
-            )
-            answer = (
-                f"**Claim Verification Result**\n\n"
-                f"> {claim_text}\n\n"
-                f"**Verdict:** {verdict}\n\n"
-                f"**Superseding Papers:**\n\n{papers_block}\n\n"
-                f"---\n"
-                f"*You can load any of these papers into your knowledge base "
-                f"to continue your research with the latest findings.*"
-            )
-        else:
-            answer = (
-                f"**Claim Verification Result**\n\n"
-                f"> {claim_text}\n\n"
-                f"**Verdict:** {verdict}\n\n"
-                f"*No papers directly superseding this claim were found in recent literature.*"
-            )
+        elif route == "verify_claim":
+            verdict = state.get("claim_verdict", "")
+            papers = state.get("superseding_papers") or []
+            claim_text = state["query"]
+            if papers:
+                papers_block = "\n\n".join(
+                    f"{i + 1}. **{p['title']}**\n   {p['summary']}\n   Link: {p['url']}"
+                    for i, p in enumerate(papers)
+                )
+                answer = (
+                    f"**Claim Verification Result**\n\n"
+                    f"> {claim_text}\n\n"
+                    f"**Verdict:** {verdict}\n\n"
+                    f"**Superseding Papers:**\n\n{papers_block}\n\n"
+                    f"---\n"
+                    f"*You can load any of these papers into your knowledge base "
+                    f"to continue your research with the latest findings.*"
+                )
+            else:
+                answer = (
+                    f"**Claim Verification Result**\n\n"
+                    f"> {claim_text}\n\n"
+                    f"**Verdict:** {verdict}\n\n"
+                    f"*No papers directly superseding this claim were found in recent literature.*"
+                )
 
-    else:  # direct_answer
-        prompt = f"Answer from your knowledge.\n\nQuestion: {query}"
-        answer = llm.invoke([{"role": "user", "content": prompt}]).content
+        else:  # direct_answer
+            prompt = f"Answer from your knowledge.\n\nQuestion: {query}"
+            answer = llm.invoke([{"role": "user", "content": prompt}]).content
+
+    except Exception as e:
+        answer = f"⚠️ Error generating answer: {type(e).__name__}: {str(e)[:300]}\n\nPlease try again."
 
     return {"answer": answer, "messages": [AIMessage(content=answer)]}
 
