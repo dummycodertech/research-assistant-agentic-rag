@@ -381,22 +381,16 @@ if prompt := st.chat_input("Ask about your papers, verify a claim, or search the
                 "generate_answer": "💬 Generating answer…",
             }
 
-            for chunk, metadata in graph.stream(input_state, config, stream_mode="messages"):
-                node = metadata.get("langgraph_node", "")
-                if node in NODE_LABELS:
-                    status_placeholder.caption(NODE_LABELS[node])
-
-                if (
-                    metadata.get("langgraph_node") == "generate_answer"
-                    and hasattr(chunk, "content")
-                    and chunk.content
-                ):
-                    status_placeholder.empty()
-                    response_text += chunk.content
-                    placeholder.markdown(response_text + "▌")
+            for updates in graph.stream(input_state, config, stream_mode="updates"):
+                for node_name, node_state in updates.items():
+                    if node_name in NODE_LABELS:
+                        status_placeholder.caption(NODE_LABELS[node_name])
+                    if node_name == "generate_answer":
+                        answer = node_state.get("answer", "")
+                        if answer:
+                            response_text = answer
 
             status_placeholder.empty()
-
 
             if not response_text:
                 final_values = graph.get_state(config).values
@@ -409,6 +403,7 @@ if prompt := st.chat_input("Ask about your papers, verify a claim, or search the
 
             with st.expander(f"📊 Graph state · turn {current_turn}", expanded=False):
                 st.json(state_snapshot)
+
 
         st.session_state.chats[active_sid].append(
             {
