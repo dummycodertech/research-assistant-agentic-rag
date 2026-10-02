@@ -25,7 +25,7 @@ def get_graph():
 
 
 SESSIONS_FILE = Path("sessions.json")
-_rename_llm = ChatGroq(model="llama-3.1-8b-instant")
+_rename_llm = ChatGroq(model="llama-3.3-70b-versatile")
 
 
 def load_sessions() -> dict:
@@ -364,7 +364,7 @@ if prompt := st.chat_input("Ask about your papers, verify a claim, or search the
             "is_relevant": None,
             "rewrite_count": 0,
         }
-        config = {"configurable": {"thread_id": active_sid}}
+        config = {"configurable": {"thread_id": f"{active_sid}_turn_{current_turn}"}}
 
         with st.chat_message("assistant"):
             placeholder = st.empty()

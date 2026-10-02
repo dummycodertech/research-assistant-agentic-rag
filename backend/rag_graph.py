@@ -21,7 +21,7 @@ from backend.models import ClaimVerificationResult, RelevancyDecision, RouterDec
 from backend.vector_store import search as vs_search
 
 load_dotenv()
-llm = ChatGroq(model="llama-3.1-8b-instant", request_timeout=30, max_retries=1)
+llm = ChatGroq(model="llama-3.3-70b-versatile", request_timeout=30, max_retries=1)
 
 
 # ── State ─────────────────────────────────────────────────────────────────────
