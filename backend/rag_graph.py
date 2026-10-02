@@ -394,14 +394,13 @@ def route_query(state: RAGState) -> str:
 
 
 def agent_routing(state: RAGState) -> str:
-    # Always execute pending tool calls first — shortcutting here would leave
-    # an AIMessage with tool_calls unmatched by ToolMessages in the checkpointer,
-    # corrupting history for all future turns in the same session.
+    # Check attempts cap FIRST — the fallback AIMessage always has tool_calls,
+    # so checking tools_condition first caused an infinite loop when Groq errored.
+    if state.get("retrieval_attempts", 0) >= MAX_RETRIEVAL_ATTEMPTS:
+        return "generate_answer"
     tc = tools_condition(state)
     if tc == "tools":
         return "retrieval"
-    if state.get("retrieval_attempts", 0) >= MAX_RETRIEVAL_ATTEMPTS:
-        return "generate_answer"
     return "relevancy_check"
 
 
