@@ -31,7 +31,7 @@ from backend.vector_store import add_paper
 
 # Robust DeepEval evaluator wrapper for Groq
 class GroqJudge(DeepEvalBaseLLM):
-    def __init__(self, model_name="llama-3.1-8b-instant"):
+    def __init__(self, model_name="openai/gpt-oss-20b"):
         self.model_name = model_name
         super().__init__(model_name)
 
@@ -139,7 +139,7 @@ def main() -> None:
     print("-> Compiling LangGraph RAG workflow...")
     graph = build_graph(db_path="eval_checkpoints.db")
 
-    judge_model = GroqJudge(model_name="llama-3.1-8b-instant")
+    judge_model = GroqJudge(model_name="openai/gpt-oss-20b")
 
     metrics = [
         ContextualPrecisionMetric(threshold=METRIC_THRESHOLD, model=judge_model),

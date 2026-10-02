@@ -25,7 +25,7 @@ def get_graph():
 
 
 SESSIONS_FILE = Path("sessions.json")
-_rename_llm = ChatGroq(model="llama-3.3-70b-versatile")
+_rename_llm = ChatGroq(model="openai/gpt-oss-20b")
 
 
 def load_sessions() -> dict:
