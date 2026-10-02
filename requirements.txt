@@ -27,6 +27,7 @@ qdrant-client
 tavily-python
 
 # Document loaders
+pymupdf
 pypdf
 arxiv
 beautifulsoup4
