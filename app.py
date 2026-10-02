@@ -368,16 +368,35 @@ if prompt := st.chat_input("Ask about your papers, verify a claim, or search the
 
         with st.chat_message("assistant"):
             placeholder = st.empty()
+            status_placeholder = st.empty()
             response_text = ""
 
+            NODE_LABELS = {
+                "router": "🔀 Routing your query…",
+                "agent_node": "🤔 Planning retrieval…",
+                "retrieval": "🔍 Searching documents…",
+                "relevancy_check": "✅ Checking relevance…",
+                "query_rewrite": "✏️ Refining query…",
+                "verify_claim": "🔬 Verifying claim against literature…",
+                "generate_answer": "💬 Generating answer…",
+            }
+
             for chunk, metadata in graph.stream(input_state, config, stream_mode="messages"):
+                node = metadata.get("langgraph_node", "")
+                if node in NODE_LABELS:
+                    status_placeholder.caption(NODE_LABELS[node])
+
                 if (
                     metadata.get("langgraph_node") == "generate_answer"
                     and hasattr(chunk, "content")
                     and chunk.content
                 ):
+                    status_placeholder.empty()
                     response_text += chunk.content
                     placeholder.markdown(response_text + "▌")
+
+            status_placeholder.empty()
+
 
             if not response_text:
                 final_values = graph.get_state(config).values

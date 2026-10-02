@@ -1,5 +1,4 @@
 import os
-import sqlite3
 import warnings
 from typing import Annotated
 
@@ -11,7 +10,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import InjectedToolCallId, tool
 from langchain_groq import ChatGroq
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.prebuilt import InjectedState, ToolNode, tools_condition
 from langgraph.types import Command
@@ -414,9 +413,8 @@ def after_relevancy_routing(state: RAGState) -> str:
     return "generate_answer"
 
 
-def build_graph(db_path: str = "checkpoints.db"):
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    checkpointer = SqliteSaver(conn)
+def build_graph():
+    checkpointer = MemorySaver()
 
     graph = StateGraph(RAGState)
     graph.add_node("router", router_node)
