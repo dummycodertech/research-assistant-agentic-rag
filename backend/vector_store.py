@@ -1,11 +1,9 @@
 import os
 
 from dotenv import load_dotenv
-# Change these lines at the top of backend/vector_store.py:
 from langchain_classic.embeddings import CacheBackedEmbeddings
 from langchain_classic.storage.file_system import LocalFileStore
 from langchain_core.documents import Document
-# 2. Replaced OpenAI with HuggingFace
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
@@ -24,14 +22,15 @@ embedding_file_store = LocalFileStore("./embedding_cache/")
 embeddings = CacheBackedEmbeddings.from_bytes_store(
     base_embeddings,
     embedding_file_store,
-    namespace="all-MiniLM-L6-v2",  # Updated namespace to avoid caching conflicts
+    namespace="all-MiniLM-L6-v2",
     query_embedding_cache=True,
 )
-qdrant_client = QdrantClient(
-    url=os.environ["QDRANT_URL"],
-    api_key=os.environ["QDRANT_API_KEY"],
-    timeout=120,
-)
+
+# Use in-memory Qdrant — avoids external port restrictions on Streamlit Cloud.
+# Documents persist for the life of the Streamlit worker process (cached via
+# @st.cache_resource on build_graph), which is sufficient for demo use.
+qdrant_client = QdrantClient(":memory:")
+
 
 
 # ── Collection ───────────────────────────────────────────────────────────────
