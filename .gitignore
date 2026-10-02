@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets — never commit real keys
+.env
+.streamlit/secrets.toml
+
+# DB / cache
+*.db
+*.db-shm
+*.db-wal
+embedding_cache/

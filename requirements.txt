@@ -1,0 +1,38 @@
+# Core LLM / LangChain
+langchain
+langchain-core
+langchain-groq
+langchain-community
+langchain-text-splitters
+langchain-qdrant
+langchain-huggingface
+langchain-classic
+
+# LangGraph
+langgraph
+langgraph-checkpoint-sqlite
+
+# Embeddings
+sentence-transformers
+transformers
+tokenizers
+huggingface-hub
+
+# Vector store
+qdrant-client
+
+# Web search
+tavily-python
+
+# Document loaders
+pypdf
+arxiv
+beautifulsoup4
+lxml
+
+# Streamlit UI
+streamlit
+
+# Misc
+python-dotenv
+pydantic
