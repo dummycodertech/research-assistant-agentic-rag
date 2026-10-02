@@ -17,6 +17,8 @@ sentence-transformers
 transformers
 tokenizers
 huggingface-hub
+torch
+torchvision
 
 # Vector store
 qdrant-client
