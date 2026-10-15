@@ -18,3 +18,4 @@ wheels/
 *.db-shm
 *.db-wal
 embedding_cache/
+.deepeval/

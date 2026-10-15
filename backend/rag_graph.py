@@ -419,7 +419,7 @@ def after_relevancy_routing(state: RAGState) -> str:
     return "generate_answer"
 
 
-def build_graph():
+def build_graph(db_path: str | None = None):
     checkpointer = MemorySaver()
 
     graph = StateGraph(RAGState)
