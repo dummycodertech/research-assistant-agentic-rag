@@ -781,4 +781,4 @@ This project currently does not contain an explicit `LICENSE` file. All rights a
 ### Author
 **dummycodertech**  
 - **GitHub:** [@dummycodertech](https://github.com/dummycodertech)
-- **Email:** `kyabatau05+leet@gmail.com`
+
