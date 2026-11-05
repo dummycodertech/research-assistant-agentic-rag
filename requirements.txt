@@ -2,6 +2,7 @@
 langchain
 langchain-core
 langchain-groq
+groq
 langchain-community
 langchain-text-splitters
 langchain-qdrant

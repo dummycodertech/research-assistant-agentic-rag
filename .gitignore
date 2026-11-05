@@ -19,3 +19,4 @@ wheels/
 *.db-wal
 embedding_cache/
 .deepeval/
+uv.lock
