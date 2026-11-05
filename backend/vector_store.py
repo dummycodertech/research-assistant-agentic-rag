@@ -26,10 +26,16 @@ embeddings = CacheBackedEmbeddings.from_bytes_store(
     query_embedding_cache=True,
 )
 
-# Use in-memory Qdrant — avoids external port restrictions on Streamlit Cloud.
-# Documents persist for the life of the Streamlit worker process (cached via
-# @st.cache_resource on build_graph), which is sufficient for demo use.
-qdrant_client = QdrantClient(":memory:")
+# Connect to Qdrant Cloud if credentials are provided, otherwise fall back to
+# an in-memory instance (useful for local dev without an env file).
+_QDRANT_URL = os.getenv("QDRANT_URL")
+_QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+
+if _QDRANT_URL and _QDRANT_API_KEY:
+    qdrant_client = QdrantClient(url=_QDRANT_URL, api_key=_QDRANT_API_KEY, timeout=30)
+else:
+    # Fallback: in-memory — avoids external port restrictions on Streamlit Cloud.
+    qdrant_client = QdrantClient(":memory:")
 
 
 
