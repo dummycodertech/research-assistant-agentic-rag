@@ -5,7 +5,8 @@
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-1.1.10-1C3C3C?logo=langchain&logoColor=white)](https://github.com/langchain-ai/langgraph)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.57.0-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Qdrant](https://img.shields.io/badge/Qdrant-In--Memory-DC382D?logo=qdrant&logoColor=white)](https://qdrant.tech/)
+[![Qdrant](https://img.shields.io/badge/Qdrant-Hybrid_RRF-DC382D?logo=qdrant&logoColor=white)](https://qdrant.tech/)
+[![FlashRank](https://img.shields.io/badge/Reranker-FlashRank_ONNX-orange)](https://github.com/PrithivirajDamodaran/FlashRank)
 [![Groq](https://img.shields.io/badge/LLM_Inference-Groq_LPUs-F55036)](https://groq.com/)
 [![Tavily](https://img.shields.io/badge/Search-Tavily_API-4F46E5)](https://tavily.com/)
 [![DeepEval](https://img.shields.io/badge/Evaluated_with-DeepEval_4.0-0A85EA)](https://docs.confident-ai.com/)
@@ -45,7 +46,7 @@
 | **Type** | Agentic Retrieval-Augmented Generation (Agentic RAG) system and Web Application. |
 | **Status** | Active / Deployed. |
 | **Deployment** | **Current:** Streamlit Community Cloud ([Live URL](https://papeer-rag-research-assistant.streamlit.app)).<br/>**Historical:** Containerized Docker deployment on AWS. |
-| **Tech Stack** | Python 3.12, LangGraph 1.1, LangChain Core/Community, Qdrant Client 1.17, Streamlit 1.57, HuggingFace `sentence-transformers`, Groq (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`), Tavily Search API, DeepEval 4.0. |
+| **Tech Stack** | Python 3.12, LangGraph 1.1, Qdrant Client 1.17, FlashRank 0.2.10 (ONNX cross-encoder), `rank-bm25`, `pymupdf4llm`, Streamlit 1.57, HuggingFace `sentence-transformers`, Groq LPUs (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`), Tavily Search API, DeepEval 4.0. |
 | **Role & Scope** | Solo developer (`dummycodertech`); designed and implemented the entire pipeline from document ingestion and graph construction to UI and DeepEval evaluation. |
 | **Duration** | May 2026 – October 2026. |
 | **Key Measured Result** | **0.8443 Contextual Precision** (8/10 passing, 80%) and **0.7488 Answer Relevancy** (6/10 passing, 60%) across 10 evaluation test cases scored by a custom Groq judge on [`documents/Openclaw_Research_Report.pdf`](./documents/Openclaw_Research_Report.pdf) with a 0.70 pass threshold. |
@@ -96,12 +97,17 @@ Dense research literature presents three core challenges for researchers using s
 
 | Feature | Technical Implementation | Code Location |
 |:---|:---|:---|
+| **Structure-Aware Parsing** | `pymupdf4llm` extracts academic PDFs into structured Markdown with preserved tables and `##` section headings, prepending context tags `[Paper: ... \| Section: ... \| Page: ...]` to every chunk. | [`backend/paper_loader.py`](backend/paper_loader.py) |
+| **Hybrid Search (Dense + BM25)** | Multi-candidate fusion combining 384-dim Qdrant dense vectors with exact lexical BM25Okapi using Reciprocal Rank Fusion (RRF, $k=60$). | [`backend/vector_store.py`](backend/vector_store.py) |
+| **FlashRank Neural Reranking** | Ultra-fast local cross-encoder (`ms-marco-MiniLM-L-12-v2`, 4MB ONNX, ~15ms on CPU) reranks top-15 RRF candidates, filtering sub-0.20 chunks and pruning tangential sentences. | [`backend/vector_store.py`](backend/vector_store.py) |
+| **Query Contextualizer Node** | Sub-400ms pre-router node via `openai/gpt-oss-20b` resolving pronouns and conversational co-references across turns while preserving per-turn token limits (< 400 tokens). | [`backend/rag_graph.py`](backend/rag_graph.py) |
+| **Grounded Inline Citations** | Synthesizer tags chunks `[1]`, `[2]` with exact page and paper metadata; Streamlit UI renders interactive expandable source inspection cards. | [`backend/rag_graph.py`](backend/rag_graph.py), [`app.py`](app.py) |
 | **Multi-Format Ingestion** | PyMuPDF parser for PDF, native text loaders for TXT/Markdown, and WebBaseLoader for arbitrary web URLs. | [`backend/paper_loader.py`](backend/paper_loader.py) |
 | **Direct ArXiv Ingestion** | Regex extraction of bare arXiv IDs with fallback to title search via ArXiv Atom XML API; automated PDF download and parsing. | [`backend/paper_loader.py`](backend/paper_loader.py) |
 | **Intent Classification** | Structured Pydantic routing with schema validation (`RouterDecision`), categorizing inputs into `retrieve`, `verify_claim`, or `direct_answer`. | [`backend/rag_graph.py`](backend/rag_graph.py) |
 | **Self-Correcting RAG** | Post-retrieval LLM relevance classification (`RelevancyDecision`); conditional query reformulation (`query_rewrite_node`). | [`backend/rag_graph.py`](backend/rag_graph.py) |
 | **Superseding Claim Verification** | Dual-pass Tavily queries (general web + `site:arxiv.org`), extracting up to 3 structured superseding citations (`ClaimVerificationResult`). | [`backend/rag_graph.py`](backend/rag_graph.py) |
-| **In-Memory Session Vector Store** | Dedicated Qdrant collections per session (`papeer_{session_id}`), indexed with 384-dimensional cosine similarity. | [`backend/vector_store.py`](backend/vector_store.py) |
+| **In-Memory Session Vector Store & LRU** | Dedicated Qdrant collections per session (`papeer_{session_id}`) with disk-persisted BM25 pickle cache (`./embedding_cache/bm25/`) and LRU eviction policy. | [`backend/vector_store.py`](backend/vector_store.py) |
 | **Disk-Cached Embeddings** | `CacheBackedEmbeddings` over `LocalFileStore` (`./embedding_cache/`) to avoid recomputing identical vectors. | [`backend/vector_store.py`](backend/vector_store.py) |
 | **Thread-Isolated Execution** | Unique LangGraph `thread_id` per conversational turn to prevent runaway context bloat while preserving chat history in UI. | [`app.py`](app.py) |
 | **Graph State Telemetry** | Collapsible JSON state inspector exposing full graph state (`retrieved_docs`, `is_relevant`, `rewrite_count`, `route`) for every turn. | [`app.py`](app.py) |
@@ -253,11 +259,13 @@ The agent node binds two explicit tools via `llm.bind_tools(RETRIEVAL_TOOLS, par
 | **LLM Inference** | Groq (`openai/gpt-oss-120b`) | API | Primary generation, router, agent planning, relevancy evaluation, and claim analysis. Chosen for ultra-low token latency. |
 | **Utility LLM** | Groq (`openai/gpt-oss-20b`) | API | Lightweight model used for autonomous session naming and DeepEval evaluation judging. |
 | **Orchestration** | LangGraph | `1.1.10` | Stateful graph orchestration with cyclic error correction and `MemorySaver` checkpointing. |
-| **Vector Database** | Qdrant Client | `1.17.1` | Local in-memory instance (`:memory:`). Eliminates external networking bottlenecks and cloud firewall issues on Streamlit Cloud. |
+| **Vector Database** | Qdrant Client | `1.17.1` | Local in-memory instance (`:memory:`) or Qdrant Cloud. Eliminates external networking bottlenecks on Streamlit Cloud. |
+| **Sparse Retrieval** | `rank-bm25` (`BM25Okapi`) | `0.2.2` | In-memory tokenized lexical index with disk persistence (`.pkl`) and LRU eviction (max 10 sessions) to prevent container OOM. |
+| **Neural Reranking** | FlashRank (`ms-marco-MiniLM-L-12-v2`) | `0.2.10` | 4MB local ONNX cross-encoder running sub-20ms on CPU with zero API tokens to rerank hybrid RRF candidates. |
 | **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | `2.2.2` | 384-dimensional dense semantic embeddings; runs locally on CPU with minimal footprint. |
 | **Embedding Caching** | LangChain Classic `CacheBackedEmbeddings` | `1.0.7` | Wraps `LocalFileStore("./embedding_cache/")` to cache dense vectors on disk across sessions. |
 | **Web Search** | Tavily API (`tavily-python`) | `0.7.24` | Search engine optimized for LLM agents; performs live web extraction and arXiv domain scoping. |
-| **Document Loaders** | PyMuPDF (`pymupdf`), `beautifulsoup4`, `arxiv` | `1.27.2`, `4.14.3`, `3.0.0` | High-fidelity text extraction from academic PDFs, HTML web pages, and the official ArXiv Atom query API. |
+| **Document Loaders** | `pymupdf4llm`, `pymupdf`, `beautifulsoup4`, `arxiv` | `2.1.0`, `1.27.2`, `4.14.3`, `3.0.0` | Structure-aware Markdown PDF extraction preserving tables and headings, plus HTML and arXiv Atom APIs. |
 | **Frontend UI** | Streamlit | `1.57.0` | Interactive web dashboard featuring session sidebars, streaming side channels, and JSON telemetry panels. |
 | **Evaluation** | DeepEval | `4.0.0` | LLM-as-a-judge evaluation harness testing precision, recall, relevancy, and faithfulness. |
 

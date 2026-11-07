@@ -21,14 +21,17 @@ huggingface-hub
 torch
 torchvision
 
-# Vector store
+# Vector store & Reranking
 qdrant-client
+rank-bm25
+flashrank
 
 # Web search
 tavily-python
 
 # Document loaders
 pymupdf
+pymupdf4llm
 pypdf
 arxiv
 beautifulsoup4

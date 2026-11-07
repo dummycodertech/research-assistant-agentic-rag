@@ -18,10 +18,27 @@ from pydantic import BaseModel, Field
 from tavily import TavilyClient
 
 from backend.models import ClaimVerificationResult, RelevancyDecision, RouterDecision
-from backend.vector_store import search as vs_search
+from backend.vector_store import hybrid_search as vs_search
 
 load_dotenv()
-llm = ChatGroq(model="openai/gpt-oss-120b", request_timeout=30, max_retries=1)
+
+# ── Model Configuration ────────────────────────────────────────────────────────
+# gpt-oss-120b: 8,000 TPM / 1,000 TPD (Groq on-demand tier)
+#   - Used for: RAG generation, agentic retrieval tool calls
+#   - Context window: 128k tokens; we cap context at ~6,000 chars to stay safe
+# gpt-oss-20b: 8,000 TPM / 1,000 TPD (Groq on-demand tier)
+#   - Used for: routing, relevancy check, query rewrite (lightweight structured calls)
+#   - Faster + cheaper than 120b for deterministic classification tasks
+
+LLM_GEN   = "openai/gpt-oss-120b"   # generator  — high-quality answers
+LLM_FAST  = "openai/gpt-oss-20b"    # classifier — routing / relevancy / rewrites
+
+# Shared timeouts tuned for Groq's P95 latency at our tier
+_GEN_TIMEOUT  = 45   # seconds — 120b can be slow on long contexts
+_FAST_TIMEOUT = 20   # seconds — 20b is snappy
+
+llm      = ChatGroq(model=LLM_GEN,  request_timeout=_GEN_TIMEOUT,  max_retries=2)
+llm_fast = ChatGroq(model=LLM_FAST, request_timeout=_FAST_TIMEOUT, max_retries=2)
 
 
 # ── State ─────────────────────────────────────────────────────────────────────
@@ -29,6 +46,9 @@ llm = ChatGroq(model="openai/gpt-oss-120b", request_timeout=30, max_retries=1)
 class RAGState(MessagesState):
     session_id: str
     query: str
+    raw_query: str | None
+    chat_history: list[dict] | None
+    source_citations: list[dict] | None
     route: str | None
     retrieved_docs: list[Document]
     retrieval_attempts: int
@@ -38,6 +58,48 @@ class RAGState(MessagesState):
     answer: str | None
     is_relevant: bool | None
     rewrite_count: int
+
+
+# ── Contextualizer Node ───────────────────────────────────────────────────────
+
+CONTEXTUALIZE_PROMPT = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        "You are a query contextualizer for an academic research paper assistant.\n"
+        "Given the recent conversation history and the latest user question, determine if the question contains "
+        "pronouns, references, or ambiguous context (such as 'it', 'they', 'the authors', 'that paper', 'this method').\n"
+        "If it does, rewrite it into a self-contained, standalone search query that preserves the full scientific intent.\n"
+        "If the question is already clear, standalone, or if there is no conversation history, return the question EXACTLY as-is.\n\n"
+        "Return ONLY the plain rewritten query. No preamble, no explanation, no quotation marks.",
+    ),
+    ("human", "Conversation History:\n{history}\n\nLatest Question: {query}"),
+])
+
+
+def contextualize_query_node(state: RAGState) -> dict:
+    raw_query = state.get("query") or (state["messages"][-1].content if state.get("messages") else "")
+    history = state.get("chat_history") or []
+    if not history:
+        return {"query": raw_query, "raw_query": raw_query}
+
+    # Format last 2 conversation turns (capped for strict token control)
+    history_lines = [
+        f"{h.get('role', 'user').title()}: {h.get('content', '')[:200]}"
+        for h in history[-4:]
+    ]
+    history_text = "\n".join(history_lines)
+
+    try:
+        res = llm_fast.invoke(
+            CONTEXTUALIZE_PROMPT.format_messages(history=history_text, query=raw_query)
+        )
+        contextualized = res.content.strip().strip('"\'')
+        if contextualized:
+            return {"query": contextualized, "raw_query": raw_query}
+    except Exception as e:
+        print(f"⚠️ Contextualizer bypass: {e}")
+
+    return {"query": raw_query, "raw_query": raw_query}
 
 
 # ── Router ────────────────────────────────────────────────────────────────────
@@ -66,7 +128,7 @@ ROUTER_PROMPT = ChatPromptTemplate.from_messages([
     ("human", "{query}"),
 ])
 
-router_chain = ROUTER_PROMPT | llm.with_structured_output(RouterDecision)
+router_chain = ROUTER_PROMPT | llm_fast.with_structured_output(RouterDecision)
 
 
 def router_node(state: RAGState) -> dict:
@@ -95,12 +157,23 @@ def router_node(state: RAGState) -> dict:
 
 class RetrieverInput(BaseModel):
     query: str = Field(description="Semantic query to search research paper chunks")
-    k: int = Field(default=4, ge=1, le=10, description="Number of chunks to retrieve (STRICT MAXIMUM: 10)")
+    k: int = Field(default=5, ge=1, le=10, description="Number of chunks to retrieve (STRICT MAXIMUM: 10)")
 
 
 class WebSearchInput(BaseModel):
     optimized_query: str = Field(description="Query rewritten and optimized for web search")
     max_results: int = Field(default=3, ge=1, le=10, description="Number of web results to return")
+
+
+def _dedup_docs(existing: list[Document] | None, new_docs: list[Document]) -> list[Document]:
+    combined = (existing or []) + new_docs
+    seen = set()
+    unique = []
+    for d in combined:
+        if d.page_content not in seen:
+            seen.add(d.page_content)
+            unique.append(d)
+    return unique
 
 
 # ── Tools ─────────────────────────────────────────────────────────────────────
@@ -120,7 +193,7 @@ def retrieve_from_vectorstore(
     summary = f"Retrieved {len(docs)} chunk(s) from the vector store."
     return [
         ToolMessage(content=summary, tool_call_id=tool_call_id),
-        Command(update={"retrieved_docs": (current_docs or []) + docs}),
+        Command(update={"retrieved_docs": _dedup_docs(current_docs, docs)}),
     ]
 
 
@@ -146,7 +219,7 @@ def web_search(
     summary = f"Found {len(web_docs)} web result(s) for: {optimized_query}"
     return [
         ToolMessage(content=summary, tool_call_id=tool_call_id),
-        Command(update={"retrieved_docs": (current_docs or []) + web_docs}),
+        Command(update={"retrieved_docs": _dedup_docs(current_docs, web_docs)}),
     ]
 
 
@@ -186,7 +259,7 @@ RELEVANCY_CHECK_SYSTEM = (
     "no useful information.\n\nBe lenient: if there is any substantive overlap, return true."
 )
 
-relevancy_llm = llm.with_structured_output(RelevancyDecision)
+relevancy_llm = llm_fast.with_structured_output(RelevancyDecision)
 
 QUERY_REWRITE_SYSTEM = (
     "You are a query rewriting assistant for a research paper retrieval system. "
@@ -217,7 +290,7 @@ def agent_node(state: RAGState) -> dict:
             content="",
             tool_calls=[{
                 "name": "retrieve_from_vectorstore",
-                "args": {"query": state["query"], "k": 4},
+                "args": {"query": state["query"], "k": 5},
                 "id": "manual_fallback_123"
             }]
         )
@@ -248,7 +321,7 @@ def relevancy_check_node(state: RAGState) -> dict:
 def query_rewrite_node(state: RAGState) -> dict:
     original_query = state["query"]
     rewrite_count = state.get("rewrite_count", 0)
-    response = llm.invoke([
+    response = llm_fast.invoke([
         {"role": "system", "content": QUERY_REWRITE_SYSTEM},
         {"role": "user", "content": f"Original query: {original_query}\n\nWrite an improved search query."},
     ])
@@ -276,7 +349,7 @@ CLAIM_ANALYSIS_PROMPT = (
     "- verdict_summary should be 1-2 sentences suitable for display to the user."
 )
 
-verification_llm = llm.with_structured_output(ClaimVerificationResult)
+verification_llm = llm_fast.with_structured_output(ClaimVerificationResult)
 
 
 def verify_claim_node(state: RAGState) -> dict:
@@ -335,6 +408,7 @@ def generate_answer_node(state: RAGState) -> dict:
     route = state.get("route")
     query = state["query"]
     answer = "I was unable to generate a response. Please try again."
+    citations: list[dict] = []
 
     try:
         if route == "retrieve":
@@ -349,11 +423,42 @@ def generate_answer_node(state: RAGState) -> dict:
                 if not docs:
                     answer = "No relevant documents were found. Please upload a paper first, then ask a question about it."
                 else:
-                    # Truncate context to avoid token limits (keep max 8000 chars)
-                    raw_context = "\n\n---\n\n".join(doc.page_content for doc in docs)
-                    context = raw_context[:8000]
-                    prompt = f"Answer the question using this context:\n\n{context}\n\nQuestion: {query}"
-                    answer = llm.invoke([{"role": "user", "content": prompt}]).content
+                    # Format each chunk with structured index tag for verifiable inline citations [1], [2]
+                    formatted_chunks = []
+                    for i, d in enumerate(docs, 1):
+                        title = d.metadata.get("title", "Document")
+                        section = d.metadata.get("section", "General")
+                        page = d.metadata.get("page", 1)
+                        tag = f"[{i}] (Title: {title} | Section: {section} | Page: {page})"
+                        formatted_chunks.append(f"{tag}\n{d.page_content}")
+                        citations.append({
+                            "index": i,
+                            "title": title,
+                            "section": section,
+                            "page": page,
+                            "snippet": d.page_content[:280],
+                        })
+
+                    raw_context = "\n\n---\n\n".join(formatted_chunks)
+                    context = raw_context[:6500]
+                    system_prompt = (
+                        "You are an expert academic research assistant answering questions about research papers.\n\n"
+                        "Core Grounding & Citation Rules:\n"
+                        "1. Strict Groundedness & Inline Citations: Support every key claim, factual metric, and technical assertion "
+                        "with inline bracketed citations referencing the numbered source blocks (e.g. '[1]', '[2]', or '[1, p. 3]'). "
+                        "Do not cite numbers that are not in the provided context.\n"
+                        "2. Strict Faithfulness: Answer strictly and faithfully using only the provided context. "
+                        "Do not introduce external facts, assumptions, or hallucinations not directly stated in the context.\n"
+                        "3. Completeness & Precision: Directly address all components of the user's question with specific details, "
+                        "metrics, and terminology from the context.\n"
+                        "4. Structured & Focused: Provide a direct, well-structured answer (using bullet points or concise sections where appropriate). "
+                        "Do not include off-topic rambling or conversational filler."
+                    )
+                    user_prompt = f"Context from research documents:\n\n{context}\n\nQuestion: {query}"
+                    answer = llm.invoke([
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ]).content
 
         elif route == "verify_claim":
             verdict = state.get("claim_verdict", "")
@@ -386,9 +491,16 @@ def generate_answer_node(state: RAGState) -> dict:
             answer = llm.invoke([{"role": "user", "content": prompt}]).content
 
     except Exception as e:
-        answer = f"⚠️ Error generating answer: {type(e).__name__}: {str(e)[:300]}\n\nPlease try again."
-
-    return {"answer": answer, "messages": [AIMessage(content=answer)]}
+        import time as _time
+        _err = str(e).lower()
+        if "429" in _err or "rate limit" in _err or "ratelimiterror" in _err:
+            _time.sleep(5)
+        raise
+    return {
+        "answer": answer,
+        "source_citations": citations,
+        "messages": [AIMessage(content=answer)],
+    }
 
 
 # ── Graph ─────────────────────────────────────────────────────────────────────
@@ -423,6 +535,7 @@ def build_graph(db_path: str | None = None):
     checkpointer = MemorySaver()
 
     graph = StateGraph(RAGState)
+    graph.add_node("contextualize_query", contextualize_query_node)
     graph.add_node("router", router_node)
     graph.add_node("agent_node", agent_node)
     graph.add_node("retrieval", base_tool_node)
@@ -431,7 +544,8 @@ def build_graph(db_path: str | None = None):
     graph.add_node("verify_claim", verify_claim_node)
     graph.add_node("generate_answer", generate_answer_node)
 
-    graph.set_entry_point("router")
+    graph.set_entry_point("contextualize_query")
+    graph.add_edge("contextualize_query", "router")
 
     graph.add_conditional_edges(
         "router",

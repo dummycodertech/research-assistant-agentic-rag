@@ -1186,8 +1186,33 @@ if not active_chats:
             selected_starter_prompt = "/btw Explain the attention mechanism and its computational complexity in intuitive terms."
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  HELPER: RENDER TELEMETRY TRACE CONSOLE
+#  HELPER: RENDER VERIFIABLE SOURCE CITATIONS & TELEMETRY TRACE CONSOLE
 # ══════════════════════════════════════════════════════════════════════════════
+def render_source_citations(citations: list[dict]):
+    if not citations:
+        return
+    with st.expander(f"📚 VERIFIED SOURCE CITATIONS ({len(citations)})", expanded=False):
+        for cit in citations:
+            st.markdown(f"""
+            <div style="
+              background: rgba(13, 16, 26, 0.7);
+              border: 1px solid rgba(34, 211, 238, 0.2);
+              border-left: 3px solid #22D3EE;
+              border-radius: 6px;
+              padding: 8px 12px;
+              margin-bottom: 8px;
+            ">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                <span style="font-family:'JetBrains Mono',monospace; font-weight:700; color:#22D3EE; font-size:12px;">[{cit.get('index', 1)}] {cit.get('title', 'Document')}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#94A3B8;">Section: {cit.get('section', 'General')} · Page {cit.get('page', 1)}</span>
+              </div>
+              <div style="font-family:'Newsreader',Georgia,serif; font-style:italic; font-size:12px; color:#CBD5E1; margin-top:5px; line-height:1.4;">
+                "{cit.get('snippet', '')}..."
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+
 def render_telemetry_trace(turn_num: int, state_snapshot: dict):
     with st.expander(f"TELEMETRY TRACE · TURN {turn_num}", expanded=False):
         if state_snapshot:
@@ -1225,6 +1250,8 @@ for msg in active_chats:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg["role"] == "assistant":
+            citations = msg.get("graph_state", {}).get("source_citations") or []
+            render_source_citations(citations)
             render_telemetry_trace(msg.get("turn", 1), msg.get("graph_state", {}))
 
 # ── Chat Input & Agent Execution ───────────────────────────────────────────────
@@ -1269,10 +1296,17 @@ if prompt:
         if is_first_message:
             maybe_rename_session(active_sid, prompt)
 
+        recent_history = [
+            {"role": m["role"], "content": m["content"][:200]}
+            for m in st.session_state.chats[active_sid][-4:]
+        ]
         input_state = {
             "messages": [HumanMessage(content=prompt)],
             "session_id": active_sid,
             "query": prompt,
+            "raw_query": prompt,
+            "chat_history": recent_history,
+            "source_citations": [],
             "route": None,
             "retrieved_docs": [],
             "retrieval_attempts": 0,
@@ -1291,13 +1325,14 @@ if prompt:
             response_text = ""
 
             NODE_LABELS = {
-                "router":          "ROUTING QUERY THROUGH INTENT CLASSIFIER",
-                "agent_node":      "PLANNING RETRIEVAL STRATEGY",
-                "retrieval":       "VECTOR EMBEDDING SCAN IN PROGRESS",
-                "relevancy_check": "CROSS-EXAMINING DOCUMENT RELEVANCY",
-                "query_rewrite":   "REWRITING & REFINING SUB-QUERIES",
-                "verify_claim":    "VERIFYING CLAIMS AGAINST ACADEMIC LITERATURE",
-                "generate_answer": "SYNTHESIZING FINAL CITATIONS & RESPONSE",
+                "contextualize_query": "RESOLVING CONVERSATION CONTEXT & CO-REFERENCES",
+                "router":              "ROUTING QUERY THROUGH INTENT CLASSIFIER",
+                "agent_node":          "PLANNING RETRIEVAL STRATEGY",
+                "retrieval":           "HYBRID EMBEDDING & FLASHRANK RERANKING",
+                "relevancy_check":     "CROSS-EXAMINING DOCUMENT RELEVANCY",
+                "query_rewrite":       "REWRITING & REFINING SUB-QUERIES",
+                "verify_claim":        "VERIFYING CLAIMS AGAINST ACADEMIC LITERATURE",
+                "generate_answer":     "SYNTHESIZING CITATIONS & RESPONSE",
             }
 
             for updates in graph.stream(input_state, config, stream_mode="updates"):
@@ -1324,6 +1359,8 @@ if prompt:
             final_values = graph.get_state(config).values
             state_snapshot = _serialize_state(final_values)
 
+            citations = state_snapshot.get("source_citations") or []
+            render_source_citations(citations)
             render_telemetry_trace(current_turn, state_snapshot)
 
         st.session_state.chats[active_sid].append({

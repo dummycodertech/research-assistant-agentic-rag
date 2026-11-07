@@ -178,7 +178,7 @@ def main() -> None:
             print("❌ Critical Error: RAG pipeline failed repeatedly.")
             return
 
-        retrieval_context = retrieval_context[:4]
+        retrieval_context = retrieval_context[:5]
         print(f"    -> Response processed successfully (Context constrained to top {len(retrieval_context)} chunks).")
         
         test_cases.append(
@@ -247,6 +247,25 @@ def main() -> None:
         print(f"   ✅ Saved intermediate results for test case {i+1}.")
 
     print(f"\n🚀 COMPLETE! Final evaluation metrics saved safely to {results_path}.")
+
+    # Summary report
+    metric_scores = {}
+    metric_passed = {}
+    for item in summary:
+        for m in item["metrics"]:
+            name = m["name"]
+            metric_scores.setdefault(name, []).append(m["score"])
+            metric_passed.setdefault(name, []).append(1 if m["passed"] else 0)
+
+    print("\n" + "=" * 65)
+    print("           FINAL DEEPEVAL BENCHMARK PERFORMANCE REPORT")
+    print("=" * 65)
+    for name, scores in metric_scores.items():
+        avg = sum(scores) / len(scores) if scores else 0.0
+        passed_cnt = sum(metric_passed[name]) if name in metric_passed else 0
+        status = "PASSED" if avg >= METRIC_THRESHOLD else "FAILED"
+        print(f" {name:<28} : {avg:.4f}  [{passed_cnt}/{len(scores)} passed] -> {status}")
+    print("=" * 65 + "\n")
 
 if __name__ == "__main__":
     main()

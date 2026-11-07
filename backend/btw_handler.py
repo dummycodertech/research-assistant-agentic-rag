@@ -8,6 +8,7 @@ from backend.models import BtwRouteDecision
 
 load_dotenv()
 
+
 llm = ChatGroq(model="openai/gpt-oss-120b")
 
 
