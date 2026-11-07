@@ -65,17 +65,50 @@ html, body, [data-testid="stAppViewContainer"] {
 
 [data-testid="stAppViewContainer"],
 [data-testid="stMain"],
-.main,
-[data-testid="stHeader"] {
+.main {
   background: transparent !important;
 }
 
-/* Hide top-right Streamlit Deploy button, header bar & default chrome */
-[data-testid="stToolbar"],
+/* 1. Keep stHeader in the DOM (transparent) so the sidebar '>>' reopen button survives */
+header[data-testid="stHeader"] {
+  background: transparent !important;
+  border-bottom: none !important;
+  pointer-events: none !important;
+}
+
+/* Re-enable pointer clicks ONLY on the sidebar expand button inside the header */
+header[data-testid="stHeader"] button,
+[data-testid="collapsedControl"],
+[data-testid="stExpandSidebarButton"],
+[data-testid="stSidebarCollapsedControl"] {
+  pointer-events: auto !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: #CBD5E1 !important;
+  background: rgba(15, 18, 30, 0.85) !important;
+  border: 1px solid rgba(99, 102, 241, 0.35) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.15) !important;
+  transition: all 0.15s ease !important;
+}
+
+[data-testid="collapsedControl"]:hover,
+[data-testid="stExpandSidebarButton"]:hover,
+[data-testid="stSidebarCollapsedControl"]:hover {
+  color: #22D3EE !important;
+  border-color: #22D3EE !important;
+  background: rgba(20, 25, 42, 0.95) !important;
+}
+
+/* 2. Hide ONLY the right-side Deploy button, status widget, and 3-dot menu */
 [data-testid="stAppDeployButton"],
 .stAppDeployButton,
-header[data-testid="stHeader"],
-#MainMenu, footer, [data-testid="stDecoration"] {
+[data-testid="stMainMenu"],
+#MainMenu,
+footer,
+[data-testid="stStatusWidget"],
+[data-testid="stDecoration"] {
   display: none !important;
   visibility: hidden !important;
 }
@@ -390,6 +423,17 @@ button[kind="primary"]:hover,
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     0 6px 25px rgba(6, 182, 212, 0.5) !important;
   border-color: #67E8F9 !important;
+}
+
+/* Ensure crisp contrast on disabled primary buttons */
+button:disabled,
+button[disabled],
+button:disabled *,
+button[disabled] *,
+[data-testid="stBaseButton-primary"]:disabled,
+[data-testid="stBaseButton-primary"]:disabled * {
+  color: rgba(255, 255, 255, 0.85) !important;
+  opacity: 0.85 !important;
 }
 
 /* ─── FROSTED GLASS BENTO STARTER CARDS (2-LINE HUD DESIGN) ─────── */
