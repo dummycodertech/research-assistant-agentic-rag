@@ -7,8 +7,6 @@ import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
-from langchain_classic.embeddings import CacheBackedEmbeddings
-from langchain_classic.storage import LocalFileStore
 from langchain_core.messages import HumanMessage
 from langchain_groq import ChatGroq
 
@@ -16,6 +14,14 @@ from backend.btw_handler import handle_btw
 from backend.paper_loader import load_arxiv, load_document, load_webpage
 from backend.rag_graph import build_graph
 from backend.vector_store import add_paper, list_papers
+from ui import (
+    inject_custom_css,
+    render_claim_verification_card,
+    render_export_note_button,
+    render_hero_hud,
+    render_source_citations,
+    render_telemetry_trace,
+)
 
 st.set_page_config(
     page_title="Papeer — Precision AI Engineering Cockpit",
@@ -27,703 +33,7 @@ st.set_page_config(
 # ══════════════════════════════════════════════════════════════════════════════
 #  FUTURISTIC AI ENGINEERING COCKPIT (PALANTIR / LINEAR / VERCEL DESIGN SYSTEM)
 # ══════════════════════════════════════════════════════════════════════════════
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap');
-
-/* ─── SYSTEM DESIGN TOKENS ─────────────────────────────────────── */
-:root {
-  --bg-app:              #06070B;
-  --bg-sidebar:          rgba(8, 10, 16, 0.94);
-  --bg-surface:          rgba(13, 16, 26, 0.70);
-  --bg-surface-elevated: #161824;
-  --bg-surface-hover:    #1A1D2D;
-  
-  --border-hairline:      rgba(255, 255, 255, 0.08);
-  --border-muted:         rgba(99, 102, 241, 0.28);
-  --border-active:        rgba(34, 211, 238, 0.5);
-  
-  --accent-indigo:        #6366F1;
-  --accent-cyan:          #22D3EE;
-  --accent-cyan-glow:     rgba(34, 211, 238, 0.4);
-  
-  --text-primary:         #F8FAFC;
-  --text-secondary:       #CBD5E1;
-  --text-muted:           #64748B;
-  --text-faint:           #475569;
-  
-  --status-emerald:       #10B981;
-  --status-amber:         #F59E0B;
-  --status-cyan:          #22D3EE;
-  
-  --font-sans:            'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:            'JetBrains Mono', monospace;
-  --font-serif:           'Newsreader', Georgia, serif;
-}
-
-* { box-sizing: border-box; }
-::selection { background: rgba(34, 211, 238, 0.25); color: #FFFFFF; }
-
-/* ─── PROCEDURAL BLUEPRINT GRID & DUAL AURORA GLOW ──────────────── */
-html, body, [data-testid="stAppViewContainer"] {
-  background-color: #06070B !important;
-  color: var(--text-primary) !important;
-  font-family: var(--font-sans) !important;
-  -webkit-font-smoothing: antialiased;
-}
-
-[data-testid="stAppViewContainer"], .stApp {
-  background-color: #06070B !important;
-  background-image: 
-    /* Top Dual Spotlight Aurora Light Cones */
-    radial-gradient(ellipse 70% 45% at 50% -10%, rgba(99, 102, 241, 0.20), transparent 70%),
-    radial-gradient(ellipse 40% 30% at 85% 10%, rgba(6, 182, 212, 0.12), transparent 60%),
-    /* Architectural Tech Micro-Grid (32px x 32px) */
-    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px) !important;
-  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px !important;
-  background-attachment: fixed !important;
-}
-
-[data-testid="stAppViewContainer"],
-[data-testid="stMain"],
-.main,
-[data-testid="stHeader"] {
-  background: transparent !important;
-}
-
-/* Hide top-right Streamlit Deploy button, header bar & default chrome */
-[data-testid="stToolbar"],
-[data-testid="stAppDeployButton"],
-.stAppDeployButton,
-header[data-testid="stHeader"],
-#MainMenu, footer, [data-testid="stDecoration"] {
-  display: none !important;
-  visibility: hidden !important;
-}
-
-/* ─── SCROLLBAR ─────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #06070B; }
-::-webkit-scrollbar-thumb { background: #262938; border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: #3B425E; }
-
-/* ─── MAIN CONTAINER (WIDENED FOR 5-NODE HUD & BENTO CARDS) ────── */
-.block-container,
-[data-testid="stMainBlockContainer"] {
-  padding-top: 2.2rem !important;
-  max-width: 960px !important;
-  width: 100% !important;
-  margin: 0 auto !important;
-  padding-bottom: 8rem !important;
-}
-
-/* ─── SIDEBAR: MINIMALIST PRECISION CONSOLE ─────────────────────── */
-[data-testid="stSidebar"] {
-  background: rgba(8, 10, 16, 0.94) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-[data-testid="stSidebarContent"] {
-  padding: 1.25rem 1rem !important;
-}
-
-/* Sidebar Buttons Default (Flat & Left-Aligned) */
-[data-testid="stSidebar"] .stButton > button {
-  border: 1px solid transparent !important;
-  background: transparent !important;
-  justify-content: flex-start !important;
-  align-items: center !important;
-  text-align: left !important;
-  padding: 8px 12px !important;
-  min-height: 36px !important;
-  height: auto !important;
-  border-radius: 6px !important;
-  color: #94A3B8 !important;
-  box-shadow: none !important;
-  transition: all 0.15s ease !important;
-}
-
-[data-testid="stSidebar"] .stButton > button > div,
-[data-testid="stSidebar"] .stButton > button [data-testid="stMarkdownContainer"] {
-  justify-content: flex-start !important;
-  align-items: center !important;
-  text-align: left !important;
-  width: 100% !important;
-  display: flex !important;
-}
-
-[data-testid="stSidebar"] .stButton > button [data-testid="stMarkdownContainer"] p {
-  text-align: left !important;
-  justify-content: flex-start !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  max-width: 210px !important;
-  font-size: 13px !important;
-  margin: 0 !important;
-}
-
-[data-testid="stSidebar"] .stButton > button:hover {
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: #F8FAFC !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-/* Inactive Session item specifically */
-[data-testid="stSidebar"] .stButton:not(:first-of-type) > button:not([kind="primary"]),
-[data-testid="stSidebar"] .stButton:not(:first-of-type) > button[kind="secondary"] {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-/* Top '+ New Chat' Command Bar */
-[data-testid="stSidebar"] .stButton:first-of-type > button {
-  background: linear-gradient(180deg, rgba(30, 35, 54, 0.7) 0%, rgba(18, 21, 34, 0.9) 100%) !important;
-  border: 1px solid rgba(99, 102, 241, 0.35) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 15px rgba(99, 102, 241, 0.12) !important;
-  color: #F8FAFC !important;
-  justify-content: center !important;
-  text-align: center !important;
-  margin-bottom: 14px !important;
-  font-weight: 500 !important;
-}
-
-[data-testid="stSidebar"] .stButton:first-of-type > button > div,
-[data-testid="stSidebar"] .stButton:first-of-type > button [data-testid="stMarkdownContainer"] {
-  justify-content: center !important;
-  text-align: center !important;
-}
-
-[data-testid="stSidebar"] .stButton:first-of-type > button:hover {
-  border-color: #6366F1 !important;
-  background: linear-gradient(180deg, rgba(36, 42, 65, 0.8) 0%, rgba(22, 26, 42, 0.95) 100%) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 20px rgba(99, 102, 241, 0.25) !important;
-  color: #FFFFFF !important;
-}
-
-/* Active Session in Sidebar (Subtle glowing left border) */
-[data-testid="stSidebar"] .stButton:not(:first-of-type) > button[kind="primary"] {
-  background: rgba(22, 25, 37, 0.85) !important;
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  border-left: 3px solid #6366F1 !important;
-  color: #F8FAFC !important;
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.1) !important;
-  justify-content: flex-start !important;
-  text-align: left !important;
-}
-
-[data-testid="stSidebar"] .stButton:not(:first-of-type) > button[kind="primary"] * {
-  color: #F8FAFC !important;
-  font-weight: 500 !important;
-}
-
-/* ─── SMOKED GLASS TABS & INGESTION DECK ─────────────────────────── */
-[data-testid="stTabs"] {
-  background: rgba(13, 16, 26, 0.68) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-    0 20px 40px -15px rgba(0, 0, 0, 0.7),
-    0 0 30px -5px rgba(99, 102, 241, 0.08) !important;
-  border-radius: 12px !important;
-  padding: 12px 18px 18px 18px !important;
-}
-
-[data-testid="stTabs"] [role="tablist"] {
-  background: rgba(10, 12, 20, 0.8) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-radius: 8px 8px 0 0 !important;
-  padding: 4px 6px !important;
-  gap: 4px !important;
-}
-
-[data-baseweb="tab-highlight"] {
-  background-color: #22D3EE !important;
-  height: 2px !important;
-  box-shadow: 0 0 10px rgba(34, 211, 238, 0.6) !important;
-}
-
-[data-testid="stTabs"] button[role="tab"] {
-  font-family: var(--font-sans) !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  color: #64748B !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 6px !important;
-  padding: 6px 14px !important;
-  transition: all 0.15s ease !important;
-}
-
-[data-testid="stTabs"] button[role="tab"]:hover {
-  color: #F8FAFC !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-}
-
-[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
-  color: #F8FAFC !important;
-  background: rgba(26, 32, 54, 0.7) !important;
-  border: 1px solid rgba(99, 102, 241, 0.25) !important;
-  font-weight: 600 !important;
-}
-
-[data-testid="stTabContent"] {
-  background: transparent !important;
-  border: none !important;
-  padding: 1.1rem 0 0 0 !important;
-  box-shadow: none !important;
-}
-
-/* ─── FUTURISTIC DROPZONE & INPUTS ───────────────────────────────── */
-[data-testid="stFileUploader"] {
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-}
-
-[data-testid="stFileUploaderDropzone"] {
-  background: rgba(9, 11, 18, 0.75) !important;
-  border: 1px dashed rgba(99, 102, 241, 0.35) !important;
-  border-radius: 8px !important;
-  transition: all 0.2s ease !important;
-}
-
-[data-testid="stFileUploaderDropzone"]:hover {
-  border-color: #22D3EE !important;
-  background: rgba(15, 20, 35, 0.85) !important;
-  box-shadow: 0 0 25px rgba(6, 182, 212, 0.15) !important;
-}
-
-[data-testid="stFileUploaderDropzone"] button {
-  background: #161824 !important;
-  color: #F8FAFC !important;
-  border: 1px solid #262938 !important;
-  border-radius: 6px !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  transition: all 0.15s ease !important;
-}
-
-[data-testid="stFileUploaderDropzone"] button:hover {
-  background: #1E2232 !important;
-  border-color: #22D3EE !important;
-}
-
-.stTextInput input, .stTextArea textarea {
-  background: rgba(9, 11, 18, 0.8) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 6px !important;
-  color: #F8FAFC !important;
-  font-family: var(--font-sans) !important;
-  font-size: 13px !important;
-  padding: 0.65rem 0.85rem !important;
-  transition: all 0.15s ease !important;
-}
-
-.stTextInput input:focus, .stTextArea textarea:focus {
-  border-color: #22D3EE !important;
-  box-shadow: 0 0 0 1px #22D3EE, 0 0 15px rgba(34, 211, 238, 0.2) !important;
-  outline: none !important;
-}
-
-/* ─── CYBER-INDIGO GRADIENT PRIMARY BUTTONS (KILL CORAL-RED) ─────── */
-button[kind="primary"],
-[data-testid="stBaseButton-primary"],
-.stButton > button[kind="primary"],
-.main .stButton > button[kind="primary"],
-[data-testid="stHorizontalBlock"] .stButton > button[kind="primary"] {
-  background: linear-gradient(135deg, #4F46E5 0%, #6366F1 50%, #0891B2 100%) !important;
-  color: #FFFFFF !important;
-  border: 1px solid rgba(165, 180, 252, 0.4) !important;
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 4px 20px rgba(99, 102, 241, 0.35) !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.02em !important;
-  border-radius: 8px !important;
-  height: 38px !important;
-  min-height: 38px !important;
-  transition: all 0.2s ease !important;
-}
-
-button[kind="primary"] *,
-[data-testid="stBaseButton-primary"] *,
-.stButton > button[kind="primary"] * {
-  color: #FFFFFF !important;
-  font-weight: 600 !important;
-}
-
-button[kind="primary"]:hover,
-[data-testid="stBaseButton-primary"]:hover,
-.stButton > button[kind="primary"]:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 6px 25px rgba(6, 182, 212, 0.5) !important;
-  border-color: #67E8F9 !important;
-}
-
-/* ─── FROSTED GLASS BENTO STARTER CARDS (2-LINE HUD DESIGN) ─────── */
-[data-testid="stHorizontalBlock"] .stButton > button:not([kind="primary"]) {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  justify-content: flex-start !important;
-  text-align: left !important;
-  padding: 16px 18px !important;
-  height: auto !important;
-  min-height: 86px !important;
-  background: linear-gradient(180deg, rgba(19, 23, 36, 0.78) 0%, rgba(12, 14, 22, 0.88) 100%) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 8px 20px rgba(0, 0, 0, 0.4) !important;
-  border-radius: 10px !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-[data-testid="stHorizontalBlock"] .stButton > button:not([kind="primary"]):hover {
-  border-color: rgba(99, 102, 241, 0.5) !important;
-  background: linear-gradient(180deg, rgba(25, 30, 48, 0.88) 0%, rgba(15, 18, 30, 0.95) 100%) !important;
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 0 25px rgba(99, 102, 241, 0.18) !important;
-  transform: translateY(-2px) !important;
-}
-
-[data-testid="stHorizontalBlock"] .stButton > button [data-testid="stMarkdownContainer"] {
-  text-align: left !important;
-  width: 100% !important;
-}
-
-[data-testid="stHorizontalBlock"] .stButton > button [data-testid="stMarkdownContainer"] p:first-child {
-  color: #F8FAFC !important;
-  font-size: 13.5px !important;
-  font-weight: 600 !important;
-  margin-bottom: 6px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  flex-wrap: wrap !important;
-}
-
-[data-testid="stHorizontalBlock"] .stButton > button [data-testid="stMarkdownContainer"] code {
-  font-family: var(--font-mono) !important;
-  font-size: 10px !important;
-  color: #38BDF8 !important;
-  background: rgba(56, 189, 248, 0.1) !important;
-  border: 1px solid rgba(56, 189, 248, 0.25) !important;
-  padding: 2px 6px !important;
-  border-radius: 4px !important;
-}
-
-[data-testid="stHorizontalBlock"] .stButton > button [data-testid="stMarkdownContainer"] p:last-child {
-  color: #94A3B8 !important;
-  font-size: 12.5px !important;
-  font-weight: 400 !important;
-  margin: 0 !important;
-  line-height: 1.45 !important;
-}
-
-/* 1-Click Benchmark Action Chip */
-[data-testid="stHorizontalBlock"] .stButton > button:not([kind="primary"]):not(:has(p:last-child:not(:first-child))) {
-  background: rgba(15, 18, 30, 0.8) !important;
-  border: 1px solid rgba(34, 211, 238, 0.35) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 20px rgba(34, 211, 238, 0.1) !important;
-  border-radius: 999px !important;
-  padding: 6px 18px !important;
-  min-height: 38px !important;
-  height: 38px !important;
-  transition: all 0.2s ease !important;
-  justify-content: center !important;
-  align-items: center !important;
-  text-align: center !important;
-}
-
-[data-testid="stHorizontalBlock"] .stButton > button:not([kind="primary"]):not(:has(p:last-child:not(:first-child))):hover {
-  border-color: #22D3EE !important;
-  background: rgba(22, 28, 48, 0.9) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 25px rgba(34, 211, 238, 0.3) !important;
-  transform: translateY(-1px) !important;
-}
-
-[data-testid="stHorizontalBlock"] .stButton > button:not([kind="primary"]):not(:has(p:last-child:not(:first-child))) * {
-  font-family: var(--font-mono) !important;
-  font-size: 11.5px !important;
-  color: #38BDF8 !important;
-  letter-spacing: 0.02em !important;
-  font-weight: 500 !important;
-}
-
-[data-testid="stHorizontalBlock"] .stButton > button:not([kind="primary"]):not(:has(p:last-child:not(:first-child))):hover * {
-  color: #FFFFFF !important;
-}
-
-/* ─── HERO TELEMETRY PILL & PIPELINE HUD ─────────────────────────── */
-.hero-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #CBD5E1;
-  background: rgba(15, 18, 30, 0.75);
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 20px rgba(99, 102, 241, 0.12);
-  border-radius: 999px;
-  padding: 5px 14px;
-  margin-bottom: 1.1rem;
-  backdrop-filter: blur(12px);
-}
-
-.pulse-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #22D3EE;
-  box-shadow: 0 0 10px #22D3EE, 0 0 18px rgba(34, 211, 238, 0.6);
-  display: inline-block;
-  animation: pulseDotCyan 2s infinite ease-in-out;
-}
-
-@keyframes pulseDotCyan {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(1.2); }
-}
-
-.hud-pipeline, .langgraph-hud, .pipeline-hud-bar {
-  display: flex !important;
-  flex-wrap: nowrap !important;
-  justify-content: center !important;
-  align-items: center !important;
-  gap: 6px !important;
-  white-space: nowrap !important;
-  margin: 0.8rem auto 1.3rem auto !important;
-  max-width: 100% !important;
-  overflow-x: auto !important;
-}
-
-.pipeline-node {
-  background: rgba(15, 18, 30, 0.75);
-  border: 1px solid rgba(99, 102, 241, 0.28);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 20px rgba(99, 102, 241, 0.08);
-  border-radius: 6px;
-  padding: 4px 8px !important;
-  font-family: var(--font-mono);
-  font-size: 10px !important;
-  color: #CBD5E1;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  backdrop-filter: blur(8px);
-  white-space: nowrap !important;
-  flex-shrink: 0 !important;
-  transition: all 0.2s ease;
-}
-
-.pipeline-node:hover {
-  border-color: #22D3EE;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 20px rgba(34, 211, 238, 0.2);
-  transform: translateY(-1px);
-}
-
-.node-num {
-  color: #22D3EE;
-  font-weight: 700;
-  text-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
-}
-
-.node-label {
-  letter-spacing: 0.03em;
-}
-
-.pipeline-arrow {
-  color: rgba(99, 102, 241, 0.45);
-  font-family: var(--font-mono);
-  font-size: 10px !important;
-  user-select: none;
-  flex-shrink: 0 !important;
-}
-
-/* ─── LIVE AGENT EXECUTION TELEMETRY BADGE ───────────────────────── */
-.agent-step-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(15, 18, 30, 0.85);
-  border: 1px solid rgba(34, 211, 238, 0.3);
-  box-shadow: 0 0 15px rgba(34, 211, 238, 0.1);
-  border-radius: 999px;
-  padding: 4px 12px;
-  margin: 0.5rem 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: #CBD5E1;
-  text-transform: uppercase;
-}
-
-.status-pulse-cyan {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #22D3EE;
-  box-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
-  display: inline-block;
-  animation: pulseCyan 1.6s infinite ease-in-out;
-}
-
-@keyframes pulseCyan {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(1.2); }
-}
-
-.status-pulse-emerald {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #10B981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
-  display: inline-block;
-  animation: pulseEmerald 2s infinite ease-in-out;
-}
-
-@keyframes pulseEmerald {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(1.1); }
-}
-
-/* ─── CHAT MESSAGES ─────────────────────────────────────────────── */
-[data-testid="stChatMessage"] {
-  background: transparent !important;
-  border: none !important;
-  padding: 0.35rem 0 !important;
-}
-
-/* User Message: Precision Obsidian with Cyan Accent */
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-  background: rgba(22, 24, 36, 0.85) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-left: 3px solid #22D3EE !important;
-  border-radius: 8px !important;
-  padding: 1rem 1.25rem !important;
-  margin: 0.5rem 0 !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
-}
-
-/* Assistant Message: Deep Matte Obsidian with Hairline Border */
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
-  background: rgba(14, 16, 23, 0.85) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  border-radius: 8px !important;
-  padding: 1rem 1.25rem !important;
-  margin: 0.5rem 0 !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
-}
-
-[data-testid="stChatMessageAvatarUser"],
-[data-testid="stChatMessageAvatarAssistant"] {
-  background: #161822 !important;
-  border: 1px solid #262938 !important;
-  border-radius: 6px !important;
-}
-
-/* ─── CHAT INPUT BAR ────────────────────────────────────────────── */
-[data-testid="stChatInput"] {
-  background: rgba(17, 19, 28, 0.92) !important;
-  backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 30px rgba(0, 0, 0, 0.5) !important;
-  border-radius: 10px !important;
-  transition: all 0.15s ease !important;
-}
-
-[data-testid="stChatInput"]:focus-within {
-  border-color: #22D3EE !important;
-  box-shadow: 0 0 0 1px #22D3EE, 0 4px 25px rgba(34, 211, 238, 0.18) !important;
-}
-
-[data-testid="stChatInputTextArea"] {
-  background: transparent !important;
-  color: #F8FAFC !important;
-  font-family: var(--font-sans) !important;
-  font-size: 13.5px !important;
-  caret-color: #22D3EE !important;
-}
-
-/* ─── EXPANDERS & TELEMETRY CONSOLE ──────────────────────────────── */
-[data-testid="stExpander"] {
-  background: rgba(13, 15, 22, 0.85) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  border-radius: 6px !important;
-  margin-top: 0.5rem !important;
-}
-
-[data-testid="stExpander"] summary {
-  font-family: var(--font-mono) !important;
-  font-size: 11px !important;
-  letter-spacing: 0.05em !important;
-  color: #94A3B8 !important;
-  text-transform: uppercase !important;
-  padding: 0.4rem 0.6rem !important;
-}
-
-[data-testid="stJson"] {
-  background: #08090E !important;
-  font-family: var(--font-mono) !important;
-  font-size: 11.5px !important;
-  border: 1px solid #1A1D27 !important;
-  border-radius: 6px !important;
-}
-
-/* Prose Markdown inside Chat */
-[data-testid="stMarkdownContainer"] code:not(pre code) {
-  background: #141722 !important;
-  color: #C7D2FE !important;
-  font-family: var(--font-mono) !important;
-  font-size: 12px !important;
-  padding: 2px 6px !important;
-  border-radius: 4px !important;
-  border: 1px solid #22263A !important;
-}
-
-[data-testid="stMarkdownContainer"] pre {
-  background: #08090E !important;
-  border: 1px solid #1E202B !important;
-  border-left: 2px solid #22D3EE !important;
-  border-radius: 6px !important;
-  padding: 0.85rem !important;
-}
-
-[data-testid="stMarkdownContainer"] pre code {
-  font-family: var(--font-mono) !important;
-  font-size: 12px !important;
-  color: #F8FAFC !important;
-}
-
-[data-testid="stMarkdownContainer"] a {
-  color: #38BDF8 !important;
-  text-decoration: underline !important;
-  text-underline-offset: 3px !important;
-}
-
-[data-testid="stMarkdownContainer"] a:hover {
-  color: #7DD3FC !important;
-}
-
-[data-testid="stBottom"] {
-  background: linear-gradient(0deg, #06070B 65%, transparent 100%) !important;
-}
-</style>
-""", unsafe_allow_html=True)
+inject_custom_css()
 
 
 # ── Core Graph Engine & Session Management ──────────────────────────────────────
@@ -919,37 +229,7 @@ with st.sidebar:
 #  HERO HEADER & ARCHITECTURE HUD (EMPTY STATE ONLY — AUTO-COLLAPSES ON ACTIVE CONVERSATION)
 # ══════════════════════════════════════════════════════════════════════════════
 if not active_chats:
-    st.markdown("""
-    <div style="text-align: center; padding: 1.8rem 0 0.8rem 0;">
-      <!-- Hero Telemetry Pill -->
-      <div class="hero-pill">
-        <span class="pulse-dot"></span>LANGGRAPH v1.1 STATE MACHINE · QDRANT IN-MEMORY · DEEPEVAL 84.4% PRECISION
-      </div>
-      
-      <!-- Editorial Title -->
-      <h1 style="font-family: 'Inter', sans-serif; font-size: 40px; font-weight: 600; letter-spacing: -0.03em; color: #F8FAFC; margin: 0 0 0.75rem 0; line-height: 1.15;">
-        Research papers, <span style="font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 500; color: #CBD5E1;">distilled.</span>
-      </h1>
-      
-      <!-- Subtitle -->
-      <p style="font-family: 'Inter', sans-serif; font-size: 14px; color: #64748B; max-width: 540px; margin: 0 auto 1.3rem auto; line-height: 1.55;">
-        Drop any research paper, arXiv link, or academic claim to extract instant summaries, verify citations against recent literature, and synthesize findings.
-      </p>
-
-      <!-- Live LangGraph Architecture HUD Pipeline Bar -->
-      <div class="pipeline-hud-bar hud-pipeline langgraph-hud">
-        <div class="pipeline-node"><span class="node-num">01</span> <span class="node-label">INGEST: PyMuPDF/ArXiv</span></div>
-        <span class="pipeline-arrow">──►</span>
-        <div class="pipeline-node"><span class="node-num">02</span> <span class="node-label">ROUTER: Pydantic</span></div>
-        <span class="pipeline-arrow">──►</span>
-        <div class="pipeline-node"><span class="node-num">03</span> <span class="node-label">RETRIEVE: Qdrant/Tavily</span></div>
-        <span class="pipeline-arrow">──►</span>
-        <div class="pipeline-node"><span class="node-num">04</span> <span class="node-label">JUDGE: Self-Correction</span></div>
-        <span class="pipeline-arrow">──►</span>
-        <div class="pipeline-node"><span class="node-num">05</span> <span class="node-label">SYNTHESIS: GPT-OSS-120B</span></div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    render_hero_hud()
 
     # 1-Click "Load Benchmark Paper" Action Chip
     col_b1, col_b2, col_b3 = st.columns([0.1, 0.8, 0.1])
@@ -982,8 +262,9 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+loaded_count = len(st.session_state.get(f"processed_files_{active_sid}", set()))
 _tab_files, _tab_web, _tab_arxiv, _tab_loaded = st.tabs(
-    ["Upload Files", "Web Pages", "ArXiv Papers", "Loaded Documents"]
+    ["Upload Files", "Web Pages", "ArXiv Papers", f"Loaded Documents ({loaded_count})"]
 )
 
 # ── Tab 1: File Upload ──────────────────────────────────────────────────────────
@@ -1188,71 +469,27 @@ if not active_chats:
 # ══════════════════════════════════════════════════════════════════════════════
 #  HELPER: RENDER VERIFIABLE SOURCE CITATIONS & TELEMETRY TRACE CONSOLE
 # ══════════════════════════════════════════════════════════════════════════════
-def render_source_citations(citations: list[dict]):
-    if not citations:
-        return
-    with st.expander(f"📚 VERIFIED SOURCE CITATIONS ({len(citations)})", expanded=False):
-        for cit in citations:
-            st.markdown(f"""
-            <div style="
-              background: rgba(13, 16, 26, 0.7);
-              border: 1px solid rgba(34, 211, 238, 0.2);
-              border-left: 3px solid #22D3EE;
-              border-radius: 6px;
-              padding: 8px 12px;
-              margin-bottom: 8px;
-            ">
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-                <span style="font-family:'JetBrains Mono',monospace; font-weight:700; color:#22D3EE; font-size:12px;">[{cit.get('index', 1)}] {cit.get('title', 'Document')}</span>
-                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#94A3B8;">Section: {cit.get('section', 'General')} · Page {cit.get('page', 1)}</span>
-              </div>
-              <div style="font-family:'Newsreader',Georgia,serif; font-style:italic; font-size:12px; color:#CBD5E1; margin-top:5px; line-height:1.4;">
-                "{cit.get('snippet', '')}..."
-              </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-
-def render_telemetry_trace(turn_num: int, state_snapshot: dict):
-    with st.expander(f"TELEMETRY TRACE · TURN {turn_num}", expanded=False):
-        if state_snapshot:
-            route = state_snapshot.get("route") or "retrieve"
-            relevant = state_snapshot.get("is_relevant")
-            rewrites = state_snapshot.get("rewrite_count", 0)
-            attempts = state_snapshot.get("retrieval_attempts", 0)
-            verdict = state_snapshot.get("claim_verdict")
-
-            relevant_badge = (
-                f'<span style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#10B981;padding:2px 8px;border-radius:4px;">relevant: True</span>'
-                if relevant is True else
-                f'<span style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);color:#F59E0B;padding:2px 8px;border-radius:4px;">relevant: {relevant}</span>'
-            )
-            verdict_badge = (
-                f'<span style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#F59E0B;padding:2px 8px;border-radius:4px;">verdict: <strong>{verdict}</strong></span>'
-                if verdict else ""
-            )
-
-            st.markdown(f"""
-            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-family:'JetBrains Mono',monospace;font-size:11px;">
-              <span style="background:rgba(15,18,30,0.85);border:1px solid rgba(255,255,255,0.08);color:#94A3B8;padding:2px 8px;border-radius:4px;">route: <strong style="color:#F8FAFC;">{route}</strong></span>
-              {relevant_badge}
-              <span style="background:rgba(15,18,30,0.85);border:1px solid rgba(255,255,255,0.08);color:#94A3B8;padding:2px 8px;border-radius:4px;">rewrites: <strong style="color:#F8FAFC;">{rewrites}</strong></span>
-              <span style="background:rgba(15,18,30,0.85);border:1px solid rgba(255,255,255,0.08);color:#94A3B8;padding:2px 8px;border-radius:4px;">attempts: <strong style="color:#F8FAFC;">{attempts}</strong></span>
-              {verdict_badge}
-            </div>
-            """, unsafe_allow_html=True)
-        st.json(state_snapshot)
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  CHAT TIMELINE
 # ══════════════════════════════════════════════════════════════════════════════
-for msg in active_chats:
+for i, msg in enumerate(active_chats):
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg["role"] == "assistant":
-            citations = msg.get("graph_state", {}).get("source_citations") or []
+            graph_state = msg.get("graph_state", {})
+            citations = graph_state.get("source_citations") or []
+            render_claim_verification_card(graph_state)
             render_source_citations(citations)
-            render_telemetry_trace(msg.get("turn", 1), msg.get("graph_state", {}))
+            render_telemetry_trace(msg.get("turn", 1), graph_state)
+            user_q = active_chats[i - 1]["content"] if i > 0 and active_chats[i - 1]["role"] == "user" else ""
+            render_export_note_button(
+                turn_num=msg.get("turn", 1),
+                user_query=user_q,
+                assistant_answer=msg["content"],
+                citations=citations,
+                key=f"dl_history_{i}_{msg.get('turn', 1)}",
+            )
 
 # ── Chat Input & Agent Execution ───────────────────────────────────────────────
 prompt = st.chat_input("Ask a question, verify a claim, or prefix with /btw for side-channel...")
@@ -1360,8 +597,16 @@ if prompt:
             state_snapshot = _serialize_state(final_values)
 
             citations = state_snapshot.get("source_citations") or []
+            render_claim_verification_card(state_snapshot)
             render_source_citations(citations)
             render_telemetry_trace(current_turn, state_snapshot)
+            render_export_note_button(
+                turn_num=current_turn,
+                user_query=prompt,
+                assistant_answer=response_text,
+                citations=citations,
+                key=f"dl_live_{current_turn}",
+            )
 
         st.session_state.chats[active_sid].append({
             "role": "assistant",

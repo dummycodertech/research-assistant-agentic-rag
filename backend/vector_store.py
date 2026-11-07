@@ -8,8 +8,17 @@ from typing import Dict, List, Tuple
 
 from dotenv import load_dotenv
 from flashrank import Ranker, RerankRequest
-from langchain_classic.embeddings import CacheBackedEmbeddings
-from langchain_classic.storage.file_system import LocalFileStore
+try:
+    from langchain_classic.embeddings import CacheBackedEmbeddings
+    from langchain_classic.storage.file_system import LocalFileStore
+    _HAS_CACHE_STORE = True
+except ImportError:
+    try:
+        from langchain.embeddings import CacheBackedEmbeddings
+        from langchain.storage import LocalFileStore
+        _HAS_CACHE_STORE = True
+    except ImportError:
+        _HAS_CACHE_STORE = False
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_qdrant import QdrantVectorStore
@@ -34,13 +43,19 @@ FLASHRANK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # ── Singletons ────────────────────────────────────────────────────────────────
 base_embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-embedding_file_store = LocalFileStore("./embedding_cache/")
-embeddings = CacheBackedEmbeddings.from_bytes_store(
-    base_embeddings,
-    embedding_file_store,
-    namespace="all-MiniLM-L6-v2",
-    query_embedding_cache=True,
-)
+if _HAS_CACHE_STORE:
+    try:
+        embedding_file_store = LocalFileStore("./embedding_cache/")
+        embeddings = CacheBackedEmbeddings.from_bytes_store(
+            base_embeddings,
+            embedding_file_store,
+            namespace="all-MiniLM-L6-v2",
+            query_embedding_cache=True,
+        )
+    except Exception:
+        embeddings = base_embeddings
+else:
+    embeddings = base_embeddings
 
 # Connect to Qdrant Cloud if credentials are provided, otherwise fall back to
 # an in-memory instance (useful for local dev without an env file).

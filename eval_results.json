@@ -1,112 +1,77 @@
 [
   {
+    "case_number": 1,
     "input": "How do Moltbot's native 9+ channels and device-agnostic access improve everyday AI usability?",
-    "actual_output": "**Everyday usability gains from Moltbot’s native multi‑channel, device‑agnostic design**\n\n- **Broad native integration with everyday messaging services**  \n  - Supports **9+ widely‑used channels**: WhatsApp (Baileys), Telegram, Discord, Slack, Signal, iMessage, Microsoft Teams, Matrix, WebChat, plus native macOS/iOS/Android apps.  \n  - Users interact with the assistant through the **same apps they already use for personal and work communication**, eliminating the need to learn a proprietary interface.\n\n- **True device‑agnostic access**  \n  - Because each channel works on **any device** (smartphone, tablet, laptop, desktop), the assistant is reachable **“anywhere, anytime.”**  \n  - Example from the report: a user **built an entire website from a phone via Telegram**, showing that complex tasks can be performed on a mobile device without switching to a separate UI.\n\n- **Seamless continuity and context retention**  \n  - Moltbot’s long‑term memory is stored locally, so the **stateful context follows the user across all channels**.  \n  - Whether the user switches from Slack on a workstation to iMessage on a phone, the assistant retains the conversation history and can continue the workflow without re‑initialising.\n\n- **Increased flexibility and productivity**  \n  - The multi‑channel approach lets users pick the **most convenient platform for a given situation** (e.g., quick reply via Signal on the go, detailed brainstorming on Discord at the desk).  \n  - This flexibility reduces friction, making AI assistance feel like a natural extension of everyday communication rather than a separate tool.\n\n- **Lower adoption barrier**  \n  - Since the assistant works within familiar ecosystems, **non‑technical users and developers alike can start using it immediately**, accelerating adoption and expanding the practical utility of the AI in daily life.\n\n**Bottom line:** By embedding itself in the nine‑plus messaging platforms people already use and by being accessible on any device, Moltbot turns AI assistance into a **transparent, always‑available collaborator**, dramatically improving everyday usability and productivity.",
+    "actual_output": "**Everyday AI usability gains from Moltbot’s native 9+ channels and device‑agnostic access**\n\n- **Native support for a wide range of messaging platforms**  \n  - Moltbot integrates directly with WhatsApp, Telegram, Discord, Slack, Signal, iMessage, Matrix, Microsoft Teams, plus WebChat and mobile apps, giving users “9+ messaging platforms simultaneously” without forcing a proprietary web UI【1】.  \n\n- **Interaction from any device or location**  \n  - Because the assistant lives inside the channels users already use daily, it can be reached from phones, tablets, laptops, or desktops on any operating system (macOS, iOS, Android, etc.)【2】.  \n\n- **Familiar, “off‑the‑shelf” interfaces**  \n  - Users communicate with Moltbot through the same chat apps they already know, eliminating the learning curve of a new interface and reducing friction for routine tasks【2】.  \n\n- **True flexibility for complex workflows**  \n  - The report cites a user who “built an entire website from phone via Telegram,” demonstrating that the multi‑channel approach lets even heavyweight tasks be performed on the device of choice【2】.  \n\n- **Seamless switching between platforms**  \n  - Since the integration is native rather than a thin wrapper, the assistant behaves consistently across all channels, so users experience the same capabilities whether they are on WhatsApp or Slack【1】【2】.  \n\n**Result:** Moltbot’s multi‑platform native integration and device‑agnostic access turn the AI assistant into a continuously available, low‑friction tool that fits naturally into users’ existing communication habits, dramatically improving everyday usability.",
+    "success": false,
+    "metrics": [
+      {
+        "name": "ContextualPrecisionMetric",
+        "score": 1.0,
+        "passed": true,
+        "reason": "The score is 1.00 because node 1 says \"Moltbot natively supports 9+ messaging platforms simultaneously (WhatsApp, Telegram, Discord, Slack, Signal, iMessage, Matrix, MS Teams)\" and node 2 says \"This multi‑channel approach enables users to interact with their AI assistant from any device, anywhere, using familiar interfaces.\" These two relevant nodes are ranked higher than nodes 3 and 4, which state \"Document 3 discusses proactive AI and risk, not the native channels or device‑agnostic access.\" and \"Document 4 focuses on technical barriers and accessibility, not channel integration.\" Thus all relevant nodes precede irrelevant ones, and 1.00 is the maximum achievable score, so it cannot be higher. "
+      },
+      {
+        "name": "ContextualRecallMetric",
+        "score": 0.5,
+        "passed": false,
+        "reason": "Score is 0.50 because sentences 1-2 of the expected output are supported by Node1 and Node2, while sentences 3-4 are not supported by any node in the retrieval context."
+      },
+      {
+        "name": "ContextualRelevancyMetric",
+        "score": 0.5,
+        "passed": false,
+        "reason": "The score is 0.50 because while the context contains relevant statements such as \"Moltbot natively supports 9+ messaging platforms simultaneously...\", most of the retrieval context is irrelevant, e.g., \"The statement does not mention native 9+ channels or device-agnostic access: 'Moltbot delivers on its promise of proactive, autonomous AI assistance but requires sophisticated users who understand and accept inherent risks.'\""
+      },
+      {
+        "name": "AnswerRelevancyMetric",
+        "score": 1.0,
+        "passed": true,
+        "reason": "The score is 1.00 because every part of the answer directly addresses how Moltbot’s native 9+ channels and device-agnostic access enhance everyday AI usability, with no irrelevant statements—hence it reaches the maximum possible relevancy."
+      },
+      {
+        "name": "FaithfulnessMetric",
+        "score": 0.0,
+        "passed": false,
+        "reason": "n/a"
+      }
+    ]
+  },
+  {
+    "case_number": 2,
+    "input": "List Moltbot's cross-session memory types and infer how they enable stateful collaboration.",
+    "actual_output": "**Cross‑session memory types stored by Moltbot**  \n*(as described in the Persistent Memory Architecture section)*【1†L1-L9】:\n\n- **Previous conversations and interaction history** – a log of what was said and done in earlier sessions.  \n- **User preferences and working patterns** – individualized settings and habitual workflows.  \n- **Ongoing project context and state** – the current status of code bases, tasks, or other work items.  \n- **Custom instructions and behavioral guidelines** – user‑provided directives that shape Moltbot’s responses.  \n- **File locations and system configurations** – paths, environment details, and system‑level information.\n\n**How these memories enable stateful collaboration**\n\n- **Continuity of dialogue** – By recalling prior conversations, Moltbot can pick up exactly where a user left off, eliminating the need to repeat background information and allowing multi‑step problem solving across days or weeks.  \n- **Personalized assistance** – Persisted preferences and patterns let Moltbot anticipate actions (e.g., preferred tools or command syntax), making interactions more efficient and tailored.  \n- **Project‑level awareness** – Retaining the project’s current state lets Moltbot manipulate code, open pull requests, or orchestrate services (e.g., managing multiple Claude Code instances) without re‑initializing the environment each session【4†L1-L4】.  \n- **Consistent behavior** – Custom instructions stored across sessions ensure Moltbot follows the same behavioral guidelines, providing reliable, predictable assistance.  \n- **Resource‑level readiness** – Knowing file locations and system configurations enables immediate execution of commands or automation scripts without re‑specifying paths, supporting seamless task automation.  \n\nTogether, these memory facets transform Moltbot from a stateless Q&A tool into a **stateful collaborative partner** that maintains context, adapts to user habits, and continuously advances ongoing work without loss of information.",
     "success": true,
     "metrics": [
       {
         "name": "ContextualPrecisionMetric",
-        "score": 0.2,
-        "passed": false,
-        "reason": "The score is 0.20 because only node 5 in the retrieval contexts is relevant, as its reason states it \"explicitly lists supported channels and explains the multi‑channel approach: 'Supported Channels: WhatsApp (via Baileys protocol), Telegram, Discord, Slack, Signal, iMessage, Microsoft Teams, Matrix, WebChat, macOS/iOS/Android apps… This multi‑channel approach enables users to interact… from any device, anywhere, using familiar interfaces.'\" The preceding nodes (1‑4) are irrelevant, each noting missing native 9+ channels or device‑agnostic access: node 1 mentions email and messaging but not the channels, node 2 focuses on hype and hardware demands, node 3 contains only URLs, and node 4 discusses logging and isolation. Since the single relevant node appears after four irrelevant nodes, contextual precision remains low at 0.20. "
+        "score": 1.0,
+        "passed": true,
+        "reason": "The score is 1.00 because the first node contains the exact list of cross‑session memory types: \"Previous conversations and interaction history\", \"User preferences and working patterns\", \"Ongoing project context and state\", \"Custom instructions and behavioral guidelines\", and \"File locations and system configurations\", matching the expected output, while the second node states \"The second document discusses hardware requirements and daemon usage; it does not mention any memory types or stateful collaboration.\", the third node says \"The third document compares Moltbot to competitors and focuses on messaging integration and orchestration; it does not list or describe Moltbot’s memory types.\", and the fourth node notes \"The fourth document references \"persistent memory\" in user reviews but does not provide the specific list of memory types or detail how they enable stateful collaboration.\", ensuring irrelevant nodes are ranked lower."
       },
       {
         "name": "ContextualRecallMetric",
         "score": 1.0,
         "passed": true,
-        "reason": "The score is 1.00 because every sentence in the expected output is directly supported by the 4th node in the retrieval context: sentence 1 matches the list of supported channels, sentence 2 matches the device‑agnostic multi‑channel description, sentence 3 matches the persistent memory statement, and sentence 4 matches the user‑report about building a website via Telegram."
+        "reason": "The score is 1.00 because every sentence (1‑7) in the expected output is directly supported by the single node in retrieval context, confirming complete recall."
       },
       {
         "name": "ContextualRelevancyMetric",
-        "score": 0.1111111111111111,
+        "score": 0.5833333333333334,
         "passed": false,
-        "reason": "The score is 0.11 because most of the context fails to mention native 9+ channels or device‑agnostic access – e.g., \"The statement does not mention native 9+ channels or device‑agnostic access.\" – and only a few lines touch on channel support, such as \"Moltbot integrates natively with messaging platforms users already employ daily: Supported Channels: WhatsApp …\" and \"This multi‑channel approach enables users to interact with their AI assistant from any device, anywhere, using familiar interfaces.\""
+        "reason": "The score is 0.58 because the retrieval context contains relevant statements such as \"Moltbot maintains long-term memory across sessions using local file storage, enabling context retention that spans days or weeks.\" yet it also includes many unrelated statements like \"The statement lists hardware platforms, not cross‑session memory types or stateful collaboration.\""
       },
       {
         "name": "AnswerRelevancyMetric",
         "score": 1.0,
         "passed": true,
-        "reason": "The score is 1.00 because the answer fully addresses the question without any irrelevant statements, directly explaining how Moltbot's native 9+ channels and device-agnostic access improve everyday AI usability."
+        "reason": "The score is 1.00 because the output fully addressed the prompt without any irrelevant statements."
       },
       {
         "name": "FaithfulnessMetric",
         "score": 1.0,
         "passed": true,
-        "reason": "The score is 1.00 because there are no contradictions and the actual output perfectly aligns with the retrieval context. Great job!"
-      }
-    ]
-  },
-  {
-    "input": "List Moltbot's cross-session memory types and infer how they enable stateful collaboration.",
-    "actual_output": "**Cross‑session memory types reported for Moltbot**\n\n- **Configuration files** – stored in `~/.moltbot/config/` (plain‑text).  \n- **Session histories / conversation logs** – persisted locally as Markdown or JSON files.  \n- **API keys and other credentials** – also saved in plain‑text files (noted as a security concern).  \n\n**How these memory artifacts enable stateful collaboration**\n\n- **Persistent context** – Because session histories are written to disk, Moltbot can reload past dialogues when a user returns, allowing it to reference earlier questions, decisions, or code snippets instead of starting from a blank slate.  \n- **Long‑term retention** – The use of local files means the stored information survives machine reboots and idle periods; the platform reports retention that can span *days or weeks* ([5][23]). This continuity turns interactions from isolated Q&A into an ongoing collaborative workflow.  \n- **Configuration awareness** – Saved configuration files let the assistant recall user‑specific settings (e.g., preferred channels, tool preferences) across sessions, so subsequent interactions automatically respect the same environment without requiring re‑initialisation.  \n- **Credential reuse (functional, not secure)** – Storing API keys locally enables Moltbot to invoke external services on behalf of the user in later sessions without asking for the keys again, further smoothing the collaborative flow (though it introduces a security risk).  \n\nTogether, these persisted artifacts give Moltbot a *stateful* memory model: each new session can build on the knowledge, settings, and prior actions captured in the saved Markdown/JSON files, supporting continuous, context‑aware collaboration rather than a stateless, one‑off exchange.",
-    "success": false,
-    "metrics": [
-      {
-        "name": "ContextualPrecisionMetric",
-        "score": 0.41666666666666663,
-        "passed": false,
-        "reason": "The score is 0.42 because the two relevant nodes appear at ranks 3 and 4—\"Moltbot maintains long‑term memory across sessions using local file storage, enabling context retention that spans days or weeks\" (third node) and \"All data persists locally on the user’s filesystem using plaintext Markdown and JSON files\" (fourth node)—while the first and second nodes discuss resource usage and hardware requirements, and the fifth node covers credential storage. These irrelevant nodes occupy the top positions, reducing the proportion of relevant nodes early in the list, so the contextual precision remains below 1."
-      },
-      {
-        "name": "ContextualRecallMetric",
-        "score": 1.0,
-        "passed": true,
-        "reason": "The score is 1.00 because every sentence in the expected output is directly supported by the 4th node in the retrieval context: sentence 1 matches the list of supported channels, sentence 2 matches the device‑agnostic multi‑channel description, sentence 3 matches the persistent memory statement, and sentence 4 matches the user‑report about building a website via Telegram."
-      },
-      {
-        "name": "ContextualRelevancyMetric",
-        "score": 0.14634146341463414,
-        "passed": false,
-        "reason": "The score is 0.15 because most of the retrieved text is about resource usage, performance, and security details that are unrelated to Moltbot's memory types, as noted in the irrelevancy list, while only a handful of lines such as \"All data persists locally on the user's filesystem using plaintext Markdown and JSON files.\" and \"Session histories and conversation logs are stored locally.\" actually touch on cross‑session memory, leading to a very low contextual relevance."
-      },
-      {
-        "name": "AnswerRelevancyMetric",
-        "score": 1.0,
-        "passed": true,
-        "reason": "The score is 1.00 because the response fully addressed the question with no irrelevant content."
-      },
-      {
-        "name": "FaithfulnessMetric",
-        "score": 1.0,
-        "passed": true,
-        "reason": "Excellent job! The output aligns perfectly with the retrieval context, so the faithfulness score is 1.00."
-      }
-    ]
-  },
-  {
-    "input": "Which LLM backends does Moltbot support, and how can users switch providers seamlessly?",
-    "actual_output": "**LLM back‑ends supported by Moltbot**\n\n- **Anthropic Claude** – Sonnet, Opus  \n- **OpenAI** – GPT‑4, GPT‑4 Turbo  \n- **Google Gemini**  \n- **Local models** via **Ollama**  \n- **Local models** via **LM Studio**  \n- **AWS Bedrock** integration  \n\n**How users can switch providers seamlessly**\n\n- Moltbot is **model‑agnostic**: the core platform abstracts the LLM behind a common interface, so the same workflow, skills, and orchestration logic work regardless of which provider is used.  \n- **Provider selection is handled in configuration** (e.g., the `~/.moltbot/config/` files). Changing the target model or API endpoint does **not require re‑architecting the bot or rebuilding pipelines**.  \n- Because the Gateway daemon and tool orchestration remain unchanged, users can simply edit the relevant config entry (e.g., point to Claude Sonnet instead of GPT‑4) and the system will route subsequent requests to the new backend.  \n- This design enables **cost‑optimization or capability‑matching** on the fly—users can pick the cheapest or most performant model for a given task without any downtime or extensive manual re‑setup.  \n\nIn short, Moltbot supports a wide range of LLM providers (Claude, OpenAI, Gemini, local Ollama/LM Studio, AWS Bedrock) and lets users switch among them by updating configuration, with no need to modify the rest of the system.",
-    "success": false,
-    "metrics": [
-      {
-        "name": "ContextualPrecisionMetric",
-        "score": 0.3333333333333333,
-        "passed": false,
-        "reason": "The score is 0.33 because one relevant node appears in the top three positions, while the first two nodes are irrelevant. As stated in the reason for node 1, \"Document 1 does not mention any LLM backends or provider switching; it focuses on Chrome/Chromium automation and storage,\" and for node 2, \"Document 2 discusses cost and LLM API calls but does not list specific backends or switching mechanisms.\" Since the relevant node is at rank 3, contextual precision = 1/3. The score cannot be higher because there are no other relevant nodes in the top three to raise the proportion."
-      },
-      {
-        "name": "ContextualRecallMetric",
-        "score": 1.0,
-        "passed": true,
-        "reason": "The score is 1.00 because every sentence in the expected output (sentences 1‑8) is directly supported by node 3 in the retrieval context, which lists the same LLM backends and notes the provider‑switching capability."
-      },
-      {
-        "name": "ContextualRelevancyMetric",
-        "score": 0.07317073170731707,
-        "passed": false,
-        "reason": "The score is 0.07 because, although the retrieval context contains a handful of relevant statements such as \"Moltbot operates as a model-agnostic platform supporting multiple LLM backends\" and \"Supported Models: Anthropic Claude (Sonnet, Opus), OpenAI GPT-4 and GPT-4 Turbo, Google Gemini, Local models via Ollama, Local models via LM Studio, AWS Bedrock integration,\" the vast majority of the context is unrelated to LLM backends or provider switching, as indicated by the numerous irrelevancy reasons. Consequently, the overall relevance remains very low."
-      },
-      {
-        "name": "AnswerRelevancyMetric",
-        "score": 1.0,
-        "passed": true,
-        "reason": "The score is 1.00 because the answer fully addresses the question without any irrelevant statements, and it cannot be higher as 1.00 is the maximum possible score."
-      },
-      {
-        "name": "FaithfulnessMetric",
-        "score": 1.0,
-        "passed": true,
-        "reason": "Excellent job! The output aligns perfectly with the retrieval context, so the faithfulness score is 1.00."
+        "reason": "The score is 1.00 because there are no contradictions, indicating perfect alignment."
       }
     ]
   },
@@ -373,6 +338,43 @@
         "score": 1.0,
         "passed": true,
         "reason": "The score is 1.00 because there are no contradictions."
+      }
+    ]
+  },
+  {
+    "input": "Which LLM backends does Moltbot support, and how can users switch providers seamlessly?",
+    "actual_output": "**LLM back‑ends supported by Moltbot**\n\n- **Anthropic Claude** – Sonnet, Opus  \n- **OpenAI** – GPT‑4, GPT‑4 Turbo  \n- **Google Gemini**  \n- **Local models** via **Ollama**  \n- **Local models** via **LM Studio**  \n- **AWS Bedrock** integration  \n\n**How users can switch providers seamlessly**\n\n- Moltbot is **model‑agnostic**: the core platform abstracts the LLM behind a common interface, so the same workflow, skills, and orchestration logic work regardless of which provider is used.  \n- **Provider selection is handled in configuration** (e.g., the `~/.moltbot/config/` files). Changing the target model or API endpoint does **not require re‑architecting the bot or rebuilding pipelines**.  \n- Because the Gateway daemon and tool orchestration remain unchanged, users can simply edit the relevant config entry (e.g., point to Claude Sonnet instead of GPT‑4) and the system will route subsequent requests to the new backend.  \n- This design enables **cost‑optimization or capability‑matching** on the fly—users can pick the cheapest or most performant model for a given task without any downtime or extensive manual re‑setup.  \n\nIn short, Moltbot supports a wide range of LLM providers (Claude, OpenAI, Gemini, local Ollama/LM Studio, AWS Bedrock) and lets users switch among them by updating configuration, with no need to modify the rest of the system.",
+    "success": false,
+    "metrics": [
+      {
+        "name": "ContextualPrecisionMetric",
+        "score": 0.3333333333333333,
+        "passed": false,
+        "reason": "The score is 0.33 because one relevant node appears in the top three positions, while the first two nodes are irrelevant. As stated in the reason for node 1, \"Document 1 does not mention any LLM backends or provider switching; it focuses on Chrome/Chromium automation and storage,\" and for node 2, \"Document 2 discusses cost and LLM API calls but does not list specific backends or switching mechanisms.\" Since the relevant node is at rank 3, contextual precision = 1/3. The score cannot be higher because there are no other relevant nodes in the top three to raise the proportion."
+      },
+      {
+        "name": "ContextualRecallMetric",
+        "score": 1.0,
+        "passed": true,
+        "reason": "The score is 1.00 because every sentence in the expected output (sentences 1‑8) is directly supported by node 3 in the retrieval context, which lists the same LLM backends and notes the provider‑switching capability."
+      },
+      {
+        "name": "ContextualRelevancyMetric",
+        "score": 0.07317073170731707,
+        "passed": false,
+        "reason": "The score is 0.07 because, although the retrieval context contains a handful of relevant statements such as \"Moltbot operates as a model-agnostic platform supporting multiple LLM backends\" and \"Supported Models: Anthropic Claude (Sonnet, Opus), OpenAI GPT-4 and GPT-4 Turbo, Google Gemini, Local models via Ollama, Local models via LM Studio, AWS Bedrock integration,\" the vast majority of the context is unrelated to LLM backends or provider switching, as indicated by the numerous irrelevancy reasons. Consequently, the overall relevance remains very low."
+      },
+      {
+        "name": "AnswerRelevancyMetric",
+        "score": 1.0,
+        "passed": true,
+        "reason": "The score is 1.00 because the answer fully addresses the question without any irrelevant statements, and it cannot be higher as 1.00 is the maximum possible score."
+      },
+      {
+        "name": "FaithfulnessMetric",
+        "score": 1.0,
+        "passed": true,
+        "reason": "Excellent job! The output aligns perfectly with the retrieval context, so the faithfulness score is 1.00."
       }
     ]
   }
