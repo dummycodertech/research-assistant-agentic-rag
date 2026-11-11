@@ -1,529 +1,617 @@
-# 📚 Papeer — Agentic Research Paper Assistant
+# Papeer — Agentic Research Paper Assistant
 
-> An agentic RAG system built on LangGraph that autonomously plans paper and web retrieval, evaluates context relevance, verifies academic claims against recent literature, and exposes an isolated side channel for off-topic queries.
+> A self-correcting LangGraph agentic RAG application for academic paper Q&A, hybrid dense-plus-lexical retrieval with FlashRank reranking, live literature claim verification, and an isolated `/btw` side channel.
 
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-1.1.10-1C3C3C?logo=langchain&logoColor=white)](https://github.com/langchain-ai/langgraph)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.57.0-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Qdrant](https://img.shields.io/badge/Qdrant-Hybrid_RRF-DC382D?logo=qdrant&logoColor=white)](https://qdrant.tech/)
-[![FlashRank](https://img.shields.io/badge/Reranker-FlashRank_ONNX-orange)](https://github.com/PrithivirajDamodaran/FlashRank)
-[![Groq](https://img.shields.io/badge/LLM_Inference-Groq_LPUs-F55036)](https://groq.com/)
-[![Tavily](https://img.shields.io/badge/Search-Tavily_API-4F46E5)](https://tavily.com/)
-[![DeepEval](https://img.shields.io/badge/Evaluated_with-DeepEval_4.0-0A85EA)](https://docs.confident-ai.com/)
+[![Python](https://img.shields.io/badge/Python-3.12_(venv%2FDocker)%20%7C%203.14_(pyproject)-3776AB?logo=python&logoColor=white)](runtime.txt)
+[![LangGraph](https://img.shields.io/badge/LangGraph-1.1.10-1C3C3C?logo=langchain&logoColor=white)](pyproject.toml)
+[![LangChain](https://img.shields.io/badge/LangChain-1.2.18-1C3C3C)](requirements.txt)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.57.0-FF4B4B?logo=streamlit&logoColor=white)](pyproject.toml)
+[![Qdrant](https://img.shields.io/badge/Qdrant-1.17.1-DC382D?logo=qdrant&logoColor=white)](pyproject.toml)
+[![FlashRank](https://img.shields.io/badge/FlashRank-0.2.10_ONNX-F97316)](requirements.txt)
+[![Groq](https://img.shields.io/badge/Groq-openai%2Fgpt--oss--120b%20%26%2020b-F55036)](backend/rag_graph.py)
+[![Tavily](https://img.shields.io/badge/Search-Tavily_0.7.24-4F46E5)](pyproject.toml)
+[![DeepEval](https://img.shields.io/badge/DeepEval-4.0.0-0A85EA)](pyproject.toml)
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://papeer-rag-research-assistant.streamlit.app)
-[![Architecture Diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/dummycodertech/research-assistant-agentic-rag?utm_source=readme&utm_medium=badge)
 
----
+> **Note:** No `LICENSE` file or `.github/workflows/` CI configuration currently exists in the repository, so dynamic license, build, and coverage badges are omitted.
 
-### 🔗 Quick Links
-- **Live Application:** [papeer-rag-research-assistant.streamlit.app](https://papeer-rag-research-assistant.streamlit.app)
+### Quick Links
+
+- **Live Demo:** [papeer-rag-research-assistant.streamlit.app](https://papeer-rag-research-assistant.streamlit.app)
 - **Interactive Architecture Map:** [gitdiagram.com/dummycodertech/research-assistant-agentic-rag](https://gitdiagram.com/dummycodertech/research-assistant-agentic-rag)
-- **Evaluation Dataset:** [`goldens.json`](./goldens.json)
-- **Raw Evaluation Telemetry:** [`eval_results.json`](./eval_results.json)
+- **Evaluation Benchmark Set:** [`goldens.json`](goldens.json) · [`documents/Openclaw_Research_Report.pdf`](documents/Openclaw_Research_Report.pdf)
+- **Measured Evaluation Results:** [`eval_results.json`](eval_results.json)
 
 ---
 
-### 📸 Application Interface
+## 📌 Project at a Glance
 
-![Papeer Main Chat and Sidebar](docs/screenshots/chat_interface.png)
-*Note: Capture the active Streamlit app showing a multi-paper session with an assistant response and the left sidebar loaded with papers.*
-
-![Graph State Inspector Panel](docs/screenshots/graph_state_inspector.png)
-*Note: Capture the expanded `📊 Graph state · turn N` panel showing the serialized LangGraph state.*
-
-![Claim Verification in Action](docs/screenshots/claim_verification.png)
-*Note: Capture a verified claim turn showing the verdict summary and structured superseding paper links.*
-
----
-
-## ⚡ Project at a Glance
-
-| Attribute | Specification |
-|:---|:---|
-| **Problem** | Traditional RAG systems suffer from semantic drift, retrieve irrelevant chunks without validation, fail when claims are superseded by newer research, and corrupt chat histories with off-topic queries. |
-| **Solution** | A self-correcting LangGraph workflow with deterministic intent routing, agent-directed vector/web search, automated relevancy evaluation, single-turn query rewriting, claim fact-checking against arXiv/web, and an isolated `/btw` side channel. |
-| **Target User** | AI researchers, graduate students, and technical engineers analyzing preprints and technical reports. |
-| **Type** | Agentic Retrieval-Augmented Generation (Agentic RAG) system and Web Application. |
-| **Status** | Active / Deployed. |
-| **Deployment** | **Current:** Streamlit Community Cloud ([Live URL](https://papeer-rag-research-assistant.streamlit.app)).<br/>**Historical:** Containerized Docker deployment on AWS. |
-| **Tech Stack** | Python 3.12, LangGraph 1.1, Qdrant Client 1.17, FlashRank 0.2.10 (ONNX cross-encoder), `rank-bm25`, `pymupdf4llm`, Streamlit 1.57, HuggingFace `sentence-transformers`, Groq LPUs (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`), Tavily Search API, DeepEval 4.0. |
-| **Role & Scope** | Solo developer (`dummycodertech`); designed and implemented the entire pipeline from document ingestion and graph construction to UI and DeepEval evaluation. |
-| **Duration** | May 2026 – October 2026. |
-| **Key Measured Result** | **0.8443 Contextual Precision** (8/10 passing, 80%) and **0.7488 Answer Relevancy** (6/10 passing, 60%) across 10 evaluation test cases scored by a custom Groq judge on [`documents/Openclaw_Research_Report.pdf`](./documents/Openclaw_Research_Report.pdf) with a 0.70 pass threshold. |
-| **Repositories & Demos** | [GitHub Repository](https://github.com/dummycodertech/research-assistant-agentic-rag) · [Streamlit Demo](https://papeer-rag-research-assistant.streamlit.app) · [GitDiagram Architecture](https://gitdiagram.com/dummycodertech/research-assistant-agentic-rag) |
+| Attribute | Details |
+| :--- | :--- |
+| **Problem** | Naive single-shot cosine RAG retrieves topically adjacent noise, misses exact technical keywords, loses context across follow-up turns, cannot detect when paper claims have been superseded, and mixes off-topic queries into research context. |
+| **Solution** | An 8-node LangGraph state machine pairing a pre-router query contextualizer, intent router, tool-calling agent (3-stage hybrid retrieval + Tavily web search), relevancy evaluator with single-turn query rewriting, live arXiv/web claim verifier, and an isolated `/btw` side channel. |
+| **Target User** | AI researchers, ML engineers, and technical practitioners analyzing research papers, preprints, and technical reports. |
+| **Project Type** | Agentic RAG Pipeline & Streamlit Web Application |
+| **Status** | Active / Benchmarked (10/10 DeepEval suite run Nov 10–11, 2026) |
+| **Deployment** | **Current:** Streamlit Community Cloud ([Live App](https://papeer-rag-research-assistant.streamlit.app)).<br/>**Previous:** Containerized Docker deployment (`Dockerfile` with Python 3.12 on port `8501`; commit `e79a727`). |
+| **Tech Stack** | Python `3.12` (`3.12.13` venv) / `pyproject.toml` `>=3.14`, LangGraph `1.1.10`, LangChain `1.2.18`, Groq (`openai/gpt-oss-120b` & `openai/gpt-oss-20b`), Qdrant (`1.17.1`, Cloud + `:memory:` fallback), `rank-bm25` `0.2.2`, FlashRank `0.2.10` (`ms-marco-MiniLM-L-12-v2`), `sentence-transformers` (`all-MiniLM-L6-v2`), `pymupdf4llm` `2.1`, Tavily `0.7.24`, Streamlit `1.57.0`, DeepEval `4.0.0`. |
+| **Role & Scope** | Solo developer (`dummycodertech`) — end-to-end architecture, document loaders, hybrid vector/BM25/FlashRank search, LangGraph state machine, Streamlit UI package, Docker setup, and DeepEval benchmark harness. |
+| **Date Range** | `Oct 2, 2026` – `Nov 11, 2026` (commit history & latest DeepEval run) |
+| **Key Measured Result** | Across 10 golden queries (`goldens.json`) on `documents/Openclaw_Research_Report.pdf` (34 pages, 116 chunks), judged with `openai/gpt-oss-20b` via DeepEval `4.0.0` at threshold `0.70` (`Nov 10–11, 2026`): **Contextual Precision `1.0000`** (`10/10`), **Faithfulness `1.0000`** (`10/10`), **Answer Relevancy `1.0000`** (`10/10`), **Contextual Recall `0.8086`** (`8/10`), **Contextual Relevancy `0.7202`** (`6/10`). |
+| **Repository** | [`github.com/dummycodertech/research-assistant-agentic-rag`](https://github.com/dummycodertech/research-assistant-agentic-rag) |
 
 ---
 
 ## 📑 Table of Contents
-1. [Overview](#-overview)
-2. [Architecture](#%EF%B8%8F-architecture)
-3. [Tech Stack](#-tech-stack)
-4. [Design Decisions & Trade-offs](#-design-decisions--trade-offs)
-5. [Data & Models](#-data--models)
-6. [Evaluation & Results](#-evaluation--results)
-7. [Testing & Quality](#-testing--quality)
-8. [Security, Privacy & Reliability](#-security-privacy--reliability)
-9. [Getting Started](#-getting-started)
-10. [Usage](#-usage)
-11. [Configuration](#%EF%B8%8F-configuration)
-12. [Project Structure](#-project-structure)
-13. [Deployment](#-deployment)
-14. [Performance & Cost](#-performance--cost)
-15. [Roadmap & Future Scope](#-roadmap--future-scope)
-16. [FAQ / How It Works in Plain English](#-faq--how-it-works-in-plain-english)
-17. [Resume & Interview Kit](#-resume--interview-kit)
-18. [Project Context Block](#-project-context-block)
-19. [References & Acknowledgements](#-references--acknowledgements)
+
+- [🔍 Overview](#-overview)
+- [🏗️ Architecture](#%EF%B8%8F-architecture)
+- [🧰 Tech Stack](#-tech-stack)
+- [⚖️ Design Decisions & Trade-offs](#%EF%B8%8F-design-decisions--trade-offs)
+- [📊 Data & Models](#-data--models)
+- [🧪 Evaluation & Results](#-evaluation--results)
+- [🧭 Testing & Quality](#-testing--quality)
+- [🔒 Security, Privacy & Reliability](#-security-privacy--reliability)
+- [🚀 Getting Started](#-getting-started)
+- [💻 Usage](#-usage)
+- [🔧 Configuration](#-configuration)
+- [📁 Project Structure](#-project-structure)
+- [☁️ Deployment](#-deployment)
+- [📈 Performance & Cost](#-performance--cost)
+- [🚀 Roadmap & Future Scope](#-roadmap--future-scope)
+- [❓ FAQ / How It Works in Plain English](#-faq--how-it-works-in-plain-english)
+- [💼 Resume & Interview Kit](#-resume--interview-kit)
+- [📦 Project Context Block](#-project-context-block)
+- [📚 References, Acknowledgements, License & Author](#-references-acknowledgements-license--author)
 
 ---
 
 ## 🔍 Overview
 
 ### The Problem
-Dense research literature presents three core challenges for researchers using standard Large Language Models:
-1. **Static Pretraining vs. Bleeding-Edge Science:** Fundamental discoveries, model updates, and benchmark retractions happen faster than training cycles. Standard LLMs hallucinate obsolete facts when queried about recent preprints.
-2. **Naive RAG Fragility:** Standard single-step RAG pipelines blindly retrieve the top-$k$ nearest neighbors based on cosine similarity. When the retrieved passages are tangential or unhelpful, the generator still attempts an answer, producing grounded hallucinations.
-3. **Context Pollution:** Exploring tangents or asking off-topic questions in standard conversational interfaces injects noise into the prompt context, permanently diluting the model's focus for subsequent domain-specific research.
+
+Single-pass Retrieval-Augmented Generation (RAG) workflows break down on dense scientific literature for four concrete reasons:
+
+1. **Bi-encoder keyword blindness & chunk noise:** Dense vector search (`all-MiniLM-L6-v2`) captures broad topical similarity but frequently misses exact identifiers (tool names, constants, model variants) while pulling long passages diluted with adjacent boilerplate.
+2. **Unchecked retrieval failures:** Standard RAG sends whatever top-$k$ chunks come back straight into generation even when none of them actually answer the query.
+3. **Outdated claims vs. newer preprints:** Static PDFs cannot tell a user if a claim has since been challenged or updated on arXiv.
+4. **Prompt/history contamination:** Asking quick definitions or unrelated factual questions inside a research session injects irrelevant context into multi-turn prompts and burns scarce token-per-minute (TPM) quota.
 
 ### The Solution
-**Papeer** transforms static question-answering into a supervised multi-step research loop:
-- **Autonomous Intent Routing:** Distinguishes between document-grounded inquiries, claim verification tasks, and general computer science knowledge.
-- **Dynamic Retrieval Planning:** A tool-calling retrieval agent formulates targeted vector store queries or invokes Tavily web search.
-- **Self-Correction Loop:** A dedicated LLM relevancy evaluator inspects retrieved chunks against the original question. If chunks are irrelevant, a query rewrite node generates alternative search vocabulary and retries retrieval up to strict termination caps.
-- **Academic Claim Verification:** Cross-checks specific claims against recent scientific preprints on arXiv and live web sources, structuring any superseding papers into actionable citations.
-- **Side Channel (`/btw`):** Executes queries completely outside the LangGraph checkpointer and vector store, keeping research memory pristine.
+
+**Papeer** puts a supervised LangGraph state machine (`build_graph()` in [`backend/rag_graph.py`](backend/rag_graph.py)) and a 3-stage hybrid retriever ([`backend/vector_store.py`](backend/vector_store.py)) behind a dark-mode Streamlit interface ([`app.py`](app.py)):
+
+- **Structure-aware PDF ingestion** extracts Markdown headings and page numbers (`[Paper: ... | Section: ... | Page: ...]`) with `pymupdf4llm` into `800`-character chunks (`150` overlap).
+- **Hybrid retrieval + reranking + pruning** fuses top-`15` Qdrant dense hits and top-`15` `BM25Okapi` hits via Reciprocal Rank Fusion (`RRF_K = 60`), reranks candidates locally using FlashRank ONNX (`ms-marco-MiniLM-L-12-v2`), filters chunks below `0.20` (always keeping the top `2`), and prunes low-overlap sentences (`prune_chunk_sentences`).
+- **Pre-router contextualization & 3-way intent routing** resolves follow-up pronouns (`openai/gpt-oss-20b`), then classifies requests via `openai/gpt-oss-120b` into `retrieve`, `verify_claim`, or `direct_answer`.
+- **Self-correcting retrieval loop** caps tool execution at `MAX_RETRIEVAL_ATTEMPTS = 3`, scores retrieved context with an LLM relevancy judge (`RelevancyDecision`), and triggers up to `1` query rewrite (`query_rewrite_node`) before synthesis.
+- **Academic claim verification & isolated `/btw` channel** runs dual Tavily web + `site:arxiv.org` queries for claims and streams off-topic `/btw` questions outside LangGraph state and vector storage.
 
 ### Key Features
 
-| Feature | Technical Implementation | Code Location |
-|:---|:---|:---|
-| **Structure-Aware Parsing** | `pymupdf4llm` extracts academic PDFs into structured Markdown with preserved tables and `##` section headings, prepending context tags `[Paper: ... \| Section: ... \| Page: ...]` to every chunk. | [`backend/paper_loader.py`](backend/paper_loader.py) |
-| **Hybrid Search (Dense + BM25)** | Multi-candidate fusion combining 384-dim Qdrant dense vectors with exact lexical BM25Okapi using Reciprocal Rank Fusion (RRF, $k=60$). | [`backend/vector_store.py`](backend/vector_store.py) |
-| **FlashRank Neural Reranking** | Ultra-fast local cross-encoder (`ms-marco-MiniLM-L-12-v2`, 4MB ONNX, ~15ms on CPU) reranks top-15 RRF candidates, filtering sub-0.20 chunks and pruning tangential sentences. | [`backend/vector_store.py`](backend/vector_store.py) |
-| **Query Contextualizer Node** | Sub-400ms pre-router node via `openai/gpt-oss-20b` resolving pronouns and conversational co-references across turns while preserving per-turn token limits (< 400 tokens). | [`backend/rag_graph.py`](backend/rag_graph.py) |
-| **Grounded Inline Citations** | Synthesizer tags chunks `[1]`, `[2]` with exact page and paper metadata; Streamlit UI renders interactive expandable source inspection cards. | [`backend/rag_graph.py`](backend/rag_graph.py), [`app.py`](app.py) |
-| **Multi-Format Ingestion** | PyMuPDF parser for PDF, native text loaders for TXT/Markdown, and WebBaseLoader for arbitrary web URLs. | [`backend/paper_loader.py`](backend/paper_loader.py) |
-| **Direct ArXiv Ingestion** | Regex extraction of bare arXiv IDs with fallback to title search via ArXiv Atom XML API; automated PDF download and parsing. | [`backend/paper_loader.py`](backend/paper_loader.py) |
-| **Intent Classification** | Structured Pydantic routing with schema validation (`RouterDecision`), categorizing inputs into `retrieve`, `verify_claim`, or `direct_answer`. | [`backend/rag_graph.py`](backend/rag_graph.py) |
-| **Self-Correcting RAG** | Post-retrieval LLM relevance classification (`RelevancyDecision`); conditional query reformulation (`query_rewrite_node`). | [`backend/rag_graph.py`](backend/rag_graph.py) |
-| **Superseding Claim Verification** | Dual-pass Tavily queries (general web + `site:arxiv.org`), extracting up to 3 structured superseding citations (`ClaimVerificationResult`). | [`backend/rag_graph.py`](backend/rag_graph.py) |
-| **In-Memory Session Vector Store & LRU** | Dedicated Qdrant collections per session (`papeer_{session_id}`) with disk-persisted BM25 pickle cache (`./embedding_cache/bm25/`) and LRU eviction policy. | [`backend/vector_store.py`](backend/vector_store.py) |
-| **Disk-Cached Embeddings** | `CacheBackedEmbeddings` over `LocalFileStore` (`./embedding_cache/`) to avoid recomputing identical vectors. | [`backend/vector_store.py`](backend/vector_store.py) |
-| **Thread-Isolated Execution** | Unique LangGraph `thread_id` per conversational turn to prevent runaway context bloat while preserving chat history in UI. | [`app.py`](app.py) |
-| **Graph State Telemetry** | Collapsible JSON state inspector exposing full graph state (`retrieved_docs`, `is_relevant`, `rewrite_count`, `route`) for every turn. | [`app.py`](app.py) |
-| **`/btw` Side Channel** | Token-streamed off-topic query handler operating outside the vector store and LangGraph memory. | [`backend/btw_handler.py`](backend/btw_handler.py) |
-| **Autonomous Session Naming** | Zero-shot generation of 3–5 word titles via `openai/gpt-oss-20b` after the first user turn. | [`app.py`](app.py) |
+| Feature | What It Does | Code Location |
+| :--- | :--- | :--- |
+| **Structure-Aware Document Loaders** | Loads `.pdf` via `pymupdf4llm` (fallback `PyMuPDFLoader`), `.txt`, `.md`/`.markdown`, HTML URLs (`WebBaseLoader`), and arXiv papers by ID or title lookup (`load_arxiv`). Stamps `title`, `section`, and `page` metadata. | [`backend/paper_loader.py`](backend/paper_loader.py) |
+| **3-Stage Hybrid Search** | Qdrant dense search (`15`) + disk-backed BM25 lexical search (`15`) → RRF (`k=60`) → FlashRank cross-encoder reranking (`min_score=0.20`, default `top_k=4` in `hybrid_search` / schema default `k=5` in tool) → extractive sentence pruning (`75%` top sentences, min `2`). | [`backend/vector_store.py`](backend/vector_store.py) |
+| **Embedding & BM25 Disk Caches** | `CacheBackedEmbeddings` over `./embedding_cache/` (`all-MiniLM-L6-v2` namespace) plus per-session BM25 pickle persistence (`./embedding_cache/bm25/`) with an LRU limit of `10` sessions in RAM. | [`backend/vector_store.py`](backend/vector_store.py) |
+| **Query Contextualizer** | Rewrites follow-up queries with pronouns (`it`, `they`, `that paper`) using the last `4` history entries (`history[-4:]`, `200` chars each) before routing. | [`backend/rag_graph.py`](backend/rag_graph.py) |
+| **3-Way Pydantic Router** | Routes to `retrieve`, `verify_claim`, or `direct_answer` (`RouterDecision`), falling back to `retrieve` if structured output parsing raises. | [`backend/rag_graph.py`](backend/rag_graph.py), [`backend/models.py`](backend/models.py) |
+| **Self-Correcting Agent Loop** | Tool-bound `120B` agent calls `retrieve_from_vectorstore` or `web_search` (`parallel_tool_calls=False`, max `3` attempts); `relevancy_check` triggers up to `1` `query_rewrite` pass if chunks are irrelevant. | [`backend/rag_graph.py`](backend/rag_graph.py) |
+| **Claim Verification Pipeline** | Runs general web + `site:arxiv.org` Tavily queries (`max_results=5` each) and extracts `is_superseded`, `verdict_summary`, and up to `3` `SupersedingPaper` items. | [`backend/rag_graph.py`](backend/rag_graph.py), [`ui/components.py`](ui/components.py) |
+| **Grounded Inline Citations & Export** | Injects `[1]`, `[2]` source blocks (`raw_context[:6500]`), renders interactive source drawers (`📚 VERIFIED SOURCE CITATIONS`), turn telemetry JSON (`TELEMETRY TRACE`), and 1-click Markdown export (`papeer_research_turn_{N}.md`). | [`backend/rag_graph.py`](backend/rag_graph.py), [`ui/components.py`](ui/components.py) |
+| **Isolated `/btw` Side Channel** | Routes `/btw ...` queries through `BtwRouteDecision` (`openai/gpt-oss-120b`), optionally searches Tavily (`max_results=3`), and streams token-by-token without touching LangGraph checkpoints or Qdrant. | [`backend/btw_handler.py`](backend/btw_handler.py), [`app.py`](app.py) |
+| **Session & Quick-Start Cockpit** | Multi-session sidebar persisted in `sessions.json` with `20B` auto-titling, `1`-click ArXiv benchmark load (`1706.03762`), and `2x2` starter protocol buttons. | [`app.py`](app.py), [`ui/styles.py`](ui/styles.py) |
 
-### Scope & Boundaries
-- **In Scope:** Single-user multi-session research, in-memory per-session document indexing, PDF/TXT/MD/URL/ArXiv loading, self-correcting retrieval, claim verification, side-channel streaming.
-- **Explicitly Out of Scope:** Multi-tenant user authentication (RBAC/SSO), persistence of vector stores across server restarts, OCR on scanned non-searchable image PDFs, fine-tuning embedding or language models.
+### Scope
+
+- **Included:** Interactive paper ingestion (`.pdf`, `.txt`, `.md`, URLs, arXiv), single-user multi-session Q&A, hybrid vector + BM25 + FlashRank retrieval, cyclic relevancy checking & query rewriting, live arXiv/web claim verification, turn telemetry inspection, Markdown note export, isolated `/btw` streaming, and 10-case DeepEval CLI benchmarking.
+- **Out of Scope:** Multi-user authentication / RBAC / tenant isolation, automatic OCR on image-only scanned PDFs, built-in chat history persistence across full browser reloads in Qdrant-only setups (LangGraph uses `MemorySaver` in RAM), REST/FastAPI API server endpoints, and model fine-tuning.
 
 ---
 
 ## 🏗️ Architecture
 
-Papeer coordinates document ingestion, stateful orchestration, and client presentation through decoupled modules.
-
-### High-Level System Flow
+### High-Level System Architecture
 
 ```mermaid
 flowchart TD
-  subgraph Ingestion["Document Ingestion Layer"]
-    A1["User File (PDF / TXT / MD)"] --> B1["paper_loader.py<br/>(PyMuPDF / TextSplitter)"]
-    A2["ArXiv ID / Title"] --> B2["paper_loader.py<br/>(ArXiv Atom API & PDF Fetch)"]
-    A3["Web URL"] --> B3["paper_loader.py<br/>(WebBaseLoader)"]
-    B1 --> C["Chunked Documents<br/>(chunk_size=1000, overlap=200)"]
-    B2 --> C
-    B3 --> C
-    C --> D["vector_store.py<br/>(CacheBackedEmbeddings)"]
-    D --> E[("In-Memory Qdrant<br/>Collection: papeer_SESSION_ID")]
-  end
+    User(["User Browser (Streamlit UI)"]) --> App["app.py + ui/ Package"]
 
-  subgraph Orchestration["LangGraph Workflow (rag_graph.py)"]
-    UserQuery(["User Query"]) --> RouterNode["Router Node<br/>(openai/gpt-oss-120b)"]
-    
-    RouterNode -->|"route = 'retrieve'"| AgentNode["Agent Node<br/>(Plan Retrieval)"]
-    RouterNode -->|"route = 'verify_claim'"| VerifyNode["Verify Claim Node<br/>(Tavily Web + ArXiv Search)"]
-    RouterNode -->|"route = 'direct_answer'"| AnswerNode["Generate Answer Node"]
-    
-    AgentNode -->|"tool_call: vectorstore / web"| ToolNode["Tool Node<br/>(Execute Retrieval)"]
-    ToolNode -->|"return ToolMessage"| AgentNode
-    
-    AgentNode -->|"no tool calls or attempts >= 3"| RelevanceNode{"Relevancy Check Node<br/>(LLM Judge)"}
-    
-    RelevanceNode -->|"is_relevant = True"| AnswerNode
-    RelevanceNode -->|"is_relevant = False & rewrites < 1"| RewriteNode["Query Rewrite Node<br/>(Refine Keywords)"]
-    RelevanceNode -->|"is_relevant = False & rewrites >= 1"| AnswerNode
-    
-    RewriteNode -->|"retries with new query"| AgentNode
-    VerifyNode --> AnswerNode
-    AnswerNode --> EndNode(["End Turn & Emit State"])
-  end
+    subgraph Ingestion["Document Ingestion & Local Storage"]
+        App -->|"PDF / TXT / MD / URL / arXiv"| Loader["backend/paper_loader.py<br/>pymupdf4llm / WebBaseLoader / arXiv Atom API"]
+        Loader -->|"800-char chunks, 150 overlap<br/>[Paper | Section | Page] header"| VStore["backend/vector_store.py<br/>CacheBackedEmbeddings (all-MiniLM-L6-v2)"]
+        VStore --> EmbedDisk[("./embedding_cache/<br/>LocalFileStore Vectors")]
+        VStore --> BM25Disk[("./embedding_cache/bm25/<br/>LRU=10 RAM + .pkl Disk")]
+        VStore -->|"QDRANT_URL set?"| Qdrant[("Qdrant Collection<br/>Cloud OR :memory:<br/>papeer_{session_id}")]
+    end
 
-  subgraph SideChannel["Side Channel (/btw)"]
-    BtwQuery(["Query starting with /btw"]) --> BtwRouter{"BtwRouteDecision<br/>(Needs Web?)"}
-    BtwRouter -->|"Yes"| TavilyDirect["Tavily Live Search"] --> BtwStream["Stream Response"]
-    BtwRouter -->|"No"| GeneralLLM["General Knowledge LLM"] --> BtwStream
-  end
+    subgraph TrustGroq["External Trust Boundary: Groq & Tavily APIs"]
+        LangGraph["backend/rag_graph.py<br/>(MemorySaver per turn_id)"]
+        SideChan["backend/btw_handler.py<br/>(/btw Side Channel)"]
+        GroqAPI[["Groq LPU API<br/>120B (Gen/Router/Agent)<br/>20B (Contextualizer/Check/Rewrite/Verify)"]]
+        TavilyAPI[["Tavily Search API<br/>Web & site:arxiv.org"]]
+    end
 
-  subgraph UI["Presentation Layer (app.py)"]
-    EndNode --> StreamlitUI["Streamlit Interface"]
-    BtwStream -.->|"Bypasses Graph"| StreamlitUI
-    StreamlitUI --> Inspector["Graph State Inspector<br/>(JSON Expander)"]
-  end
+    App -->|"Standard Prompt<br/>graph.stream(updates)"| LangGraph
+    App -->|"Prompt starts with /btw"| SideChan
+    App <-->|"Read / Write Metadata"| SessFile[("sessions.json")]
 
-  classDef primary fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#1e3a8a;
-  classDef accent fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f;
-  classDef storage fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337;
-  classDef sidechannel fill:#f3e8ff,stroke:#7c3aed,stroke-width:1.5px,color:#4c1d95;
-  classDef terminal fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d;
-
-  class RouterNode,AgentNode,RelevanceNode,RewriteNode,VerifyNode,AnswerNode primary;
-  class B1,B2,B3,C accent;
-  class D,E storage;
-  class BtwRouter,TavilyDirect,GeneralLLM,BtwStream sidechannel;
-  class UserQuery,BtwQuery,EndNode terminal;
+    LangGraph <-->|"Hybrid Search<br/>Qdrant(15)+BM25(15) -> RRF -> FlashRank"| VStore
+    LangGraph <-->|"Inference Calls"| GroqAPI
+    LangGraph <-->|"web_search & verify_claim"| TavilyAPI
+    SideChan <-->|"Direct Streaming"| GroqAPI
+    SideChan <-->|"Optional Live Web (3 hits)"| TavilyAPI
 ```
+
+### LangGraph State Machine & Agent Control Flow
+
+This matches the exact nodes and conditional edges compiled in `build_graph()` ([`backend/rag_graph.py`](backend/rag_graph.py#L534-L581)):
+
+```mermaid
+flowchart TD
+    Start(["__start__"]) --> Context["contextualize_query (20B)<br/>Rewrites pronouns using chat_history[-4:]"]
+    Context --> Router["router (120B, RouterDecision)<br/>Fallback on parse error -> retrieve"]
+
+    Router -->|"route = retrieve"| Agent["agent_node (120B + tools)<br/>Binds retrieve_from_vectorstore, web_search"]
+    Router -->|"route = verify_claim"| Verify["verify_claim (Tavily + 20B)<br/>5 web + 5 site:arxiv.org results"]
+    Router -->|"route = direct_answer"| Gen["generate_answer (120B)<br/>Grounded inline [1],[2] citations"]
+
+    Agent -->|"attempts < 3 & tool_calls"| Tools["retrieval (ToolNode)<br/>Executes vectorstore or Tavily tool"]
+    Tools -->|"Command updates retrieved_docs"| Agent
+
+    Agent -->|"no tool_calls (attempts < 3)"| RelCheck{"relevancy_check (20B)<br/>Inspects top 3 docs[:300]"}
+    Agent -->|"attempts >= 3"| Gen
+
+    RelCheck -->|"is_relevant = True"| Gen
+    RelCheck -->|"is_relevant = False & rewrite_count < 1"| Rewrite["query_rewrite (20B)<br/>Clears retrieved_docs, resets attempts=0"]
+    RelCheck -->|"is_relevant = False & rewrite_count >= 1"| Gen
+
+    Rewrite --> Agent
+    Verify --> Gen
+    Gen --> End(["__end__"])
+```
+
+### End-to-End Request Flows
+
+<details>
+<summary><strong>Click to expand: Sequence diagram & step-by-step walk-through for Paper Q&A, Claim Verification, and /btw</strong></summary>
+
+```mermaid
+sequenceDiagram
+    actor U as Researcher
+    participant UI as app.py (Streamlit)
+    participant LG as LangGraph (rag_graph.py)
+    participant VS as vector_store.py (Qdrant + BM25 + FlashRank)
+    participant G as Groq API (120B / 20B)
+    participant T as Tavily API
+
+    Note over U,UI: Path A: Standard Paper Q&A (thread_id = "{sid}_turn_{n}")
+    U->>UI: Enter question
+    UI->>LG: graph.stream(input_state, config, stream_mode="updates")
+    LG->>G: contextualize_query (20B) if chat_history non-empty
+    LG->>G: router (120B, RouterDecision) -> "retrieve"
+    LG->>G: agent_node (120B bound tools) -> retrieve_from_vectorstore(query, k)
+    LG->>VS: hybrid_search(query, session_id, k)
+    VS-->>VS: Qdrant(15) + BM25(15) -> RRF -> FlashRank >=0.20 -> prune_sentences
+    VS-->>LG: Deduplicated top-k Documents
+    LG->>G: agent_node (120B) finishes tool gathering
+    LG->>G: relevancy_check (20B, RelevancyDecision)
+    alt Relevant (is_relevant = True)
+        LG->>G: generate_answer (120B, raw_context[:6500])
+    else Not relevant & rewrite_count < 1
+        LG->>G: query_rewrite (20B) -> clears docs & retries agent_node
+        LG->>G: generate_answer (120B) or abstains if still irrelevant
+    end
+    LG-->>UI: answer + source_citations + serialized state
+    UI-->>U: Answer + Cited Sources + Telemetry + Export (.md)
+
+    Note over U,UI: Path B: Isolated /btw Side Channel
+    U->>UI: "/btw What is softmax?"
+    UI->>G: handle_btw() -> BtwRouteDecision (120B)
+    opt needs_web_search = True
+        UI->>T: client.search(query, max_results=3)
+    end
+    UI-->>U: Streamed response (zero MemorySaver/Qdrant writes)
+```
+
+</details>
 
 ### Component Inventory
 
 | Component | Responsibility | Source File | Inputs | Outputs |
-|:---|:---|:---|:---|:---|
-| **Document Loaders** | Ingests PDFs, TXT, Markdown, Web URLs, and arXiv papers into standardized chunks. | [`backend/paper_loader.py`](backend/paper_loader.py) | File paths, URLs, or arXiv IDs/titles | `list[Document]` (stamped with `title` metadata) |
-| **Vector Engine** | Manages per-session Qdrant collections and disk-backed embedding caches. | [`backend/vector_store.py`](backend/vector_store.py) | Text chunks, semantic queries, `session_id` | Top-$k$ `Document` objects |
-| **Router Node** | Classifies incoming user prompts into distinct processing branches. | [`backend/rag_graph.py`](backend/rag_graph.py) | Human message from `RAGState` | `{"route": "retrieve" \| "verify_claim" \| "direct_answer"}` |
-| **Agent Node** | Plans and emits tool calls (`retrieve_from_vectorstore`, `web_search`). | [`backend/rag_graph.py`](backend/rag_graph.py) | Conversation history, system instructions | `AIMessage` with tool calls or text |
-| **Tool Node** | Prebuilt LangGraph tool executor dispatching vector and web searches. | [`backend/rag_graph.py`](backend/rag_graph.py) | `tool_calls` payload | `list[ToolMessage]`, updated `retrieved_docs` |
-| **Relevancy Check Node** | Assesses whether retrieved context meaningfully answers the query. | [`backend/rag_graph.py`](backend/rag_graph.py) | Query string, top 3 retrieved document snippets | `{"is_relevant": bool}` |
-| **Query Rewrite Node** | Reformulates the query with alternative terminology upon retrieval failure. | [`backend/rag_graph.py`](backend/rag_graph.py) | Failed query string, `rewrite_count` | Updated `query`, cleared `retrieved_docs` |
-| **Verify Claim Node** | Executes dual Tavily queries and analyzes superseding literature. | [`backend/rag_graph.py`](backend/rag_graph.py) | Claim text from user message | Structured `ClaimVerificationResult` |
-| **Generate Answer Node** | Synthesizes the final grounded answer with strict context truncation. | [`backend/rag_graph.py`](backend/rag_graph.py) | `route`, `retrieved_docs`, `query`, claim verdicts | Final string `answer`, `AIMessage` |
-| **Side Channel Handler** | Streams non-research questions without touching vector collections or state. | [`backend/btw_handler.py`](backend/btw_handler.py) | Unprefixed query string | Token generator (`Generator[str, None, None]`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Document Loaders** | Extract & split PDF, TXT, Markdown, URL, and arXiv documents with section/page tags. | [`backend/paper_loader.py`](backend/paper_loader.py) | File path, URL, or arXiv ID/title | `list[Document]` (`800`-char chunks, `150` overlap) |
+| **Hybrid Vector & Rerank Store** | Dense Qdrant index, disk-backed BM25 LRU index, RRF merge, FlashRank reranker, sentence pruner. | [`backend/vector_store.py`](backend/vector_store.py) | `list[Document]`, `query`, `session_id`, `k` | Top-`k` pruned `Document` objects, title lists |
+| **LangGraph RAG Workflow** | Compiles and runs the 8-node self-correcting state graph and tool bindings. | [`backend/rag_graph.py`](backend/rag_graph.py) | `RAGState` (`messages`, `session_id`, `query`, `chat_history`) | Updated `RAGState` (`answer`, `source_citations`, telemetry) |
+| **Pydantic Schemas** | Enforces structured JSON outputs for routing, relevancy, claims, and `/btw`. | [`backend/models.py`](backend/models.py) | Unstructured LLM outputs | Validated Pydantic v2 objects |
+| **Side-Channel Handler** | Handles `/btw` queries cleanly outside graph checkpoints and Qdrant. | [`backend/btw_handler.py`](backend/btw_handler.py) | Unprefixed `/btw` query string | Token stream (`Generator[str, None, None]`) |
+| **Streamlit Cockpit & Sessions** | Multi-session UI orchestration, ingestion deck, streaming updates, chat persistence in UI state. | [`app.py`](app.py) | User uploads, links, chat prompts | Rendered cockpit, `sessions.json` metadata |
+| **UI Components & Styling** | Custom Palantir/Linear/Vercel dark CSS tokens, HUD bar, citation cards, verdict banner, telemetry, export button. | [`ui/components.py`](ui/components.py), [`ui/styles.py`](ui/styles.py), [`ui/__init__.py`](ui/__init__.py) | `state_snapshot`, `citations`, `turn_num` | HTML/CSS blocks, `.md` download payload |
+| **Secrets Bootstrapper** | Copies `st.secrets` keys into `os.environ` prior to backend imports. | [`streamlit_secrets_bridge.py`](streamlit_secrets_bridge.py) | `st.secrets` dictionary | Populated `os.environ` vars |
+| **DeepEval Benchmark Runner** | Resumable 10-case benchmark suite with Groq 429 parsing and per-case + metric checkpoints. | [`evaluate.py`](evaluate.py) | [`goldens.json`](goldens.json), PDF corpus | [`eval_results.json`](eval_results.json), `eval_logs/` |
 
----
-
-### Detailed Agentic & Control-Flow Mechanics
+<details>
+<summary><strong>Click to expand: Deep Agentic Internals (State Schema, Tools, Prompts, Loop Caps & UI Layer)</strong></summary>
 
 #### 1. State Schema (`RAGState`)
-Graph state is maintained via `RAGState` (inheriting from LangGraph's `MessagesState`):
-```python
-class RAGState(MessagesState):
-    session_id: str
-    query: str
-    route: str | None
-    retrieved_docs: list[Document]
-    retrieval_attempts: int
-    claim_verdict: str | None
-    claim_source: str | None
-    superseding_papers: list[dict] | None
-    answer: str | None
-    is_relevant: bool | None
-    rewrite_count: int
-```
+Defined in [`backend/rag_graph.py`](backend/rag_graph.py#L46-L60) extending `MessagesState`:
+- `session_id: str` — isolates Qdrant collection (`papeer_{session_id.replace('-', '_')}`) and BM25 pickle cache.
+- `query: str` / `raw_query: str | None` — `contextualize_query_node` writes the resolved standalone query to `query` while preserving the original input in `raw_query`. *(Implementation nuance: `router_node` and `verify_claim_node` read `state["messages"][-1].content`, whereas `agent_node` fallback, `relevancy_check_node`, `query_rewrite_node`, and `generate_answer_node` read `state["query"]`.)*
+- `chat_history: list[dict] | None` — last 4 messages passed from `app.py` (`content[:200]`) strictly for pronoun resolution.
+- `route: str | None` — `"retrieve" | "verify_claim" | "direct_answer"`.
+- `retrieved_docs: list[Document]` / `source_citations: list[dict] | None` — deduplicated passages (`_dedup_docs` by `page_content`) and citation cards (`index`, `title`, `section`, `page`, `snippet[:280]`).
+- `retrieval_attempts: int` / `rewrite_count: int` / `is_relevant: bool | None` — loop-control counters and relevancy verdict.
+- `claim_verdict: str | None` / `claim_source: str | None` / `superseding_papers: list[dict] | None` — populated on `verify_claim`.
+- `answer: str | None` — final response string.
 
-#### 2. Tool Inventory
-The agent node binds two explicit tools via `llm.bind_tools(RETRIEVAL_TOOLS, parallel_tool_calls=False)`:
-1. `retrieve_from_vectorstore(query: str, k: int)`:
-   - Queries the active session's in-memory Qdrant collection.
-   - Constrained to $1 \le k \le 10$ (default: 4).
-   - Injects state dependencies: `session_id`, `current_docs`, and `tool_call_id`.
-   - Appends retrieved passages to `RAGState["retrieved_docs"]`.
-2. `web_search(optimized_query: str, max_results: int)`:
-   - Queries Tavily Search API for live web context.
-   - Constrained to $1 \le \text{max\_results} \le 10$ (default: 3).
-   - Transforms external web snippets into LangChain `Document` objects.
+#### 2. Tool Inventory (`RETRIEVAL_TOOLS`, `parallel_tool_calls=False`)
+| Tool | Purpose | Validated Inputs | State Side Effects |
+| :--- | :--- | :--- | :--- |
+| `retrieve_from_vectorstore` | Calls `hybrid_search(query, session_id, k)`. | `query: str`, `k: int` (`default=5`, `1 <= k <= 10`), injected `session_id`, `current_docs`, `tool_call_id` | Appends deduplicated `Document`s to `retrieved_docs` via `Command(update=...)` and emits `ToolMessage`. |
+| `web_search` | Live Tavily web search for recent events or external facts. | `optimized_query: str`, `max_results: int` (`default=3`, `1 <= max_results <= 10`), injected `current_docs`, `tool_call_id` | Wraps hits as `Document(metadata={"url", "title"})`, updates `retrieved_docs`, emits `ToolMessage`. |
 
-#### 3. Termination Caps & Safety Fallbacks
-- **Retrieval Loop Cap:** Hard-limited by `MAX_RETRIEVAL_ATTEMPTS = 3`. If the agent emits tool calls beyond 3 attempts, `agent_routing` forces immediate transit to `generate_answer`.
-- **Query Rewrite Cap:** Hard-limited to 1 rewrite per turn (`rewrite_count < 1`). If a rewritten query still yields irrelevant chunks, the system bypasses further rewrites and answers with available context or an explicit limitation notice.
-- **Context Length Cap:** Prior to answer generation, retrieved documents are concatenated and hard-truncated to 8,000 characters (`context = raw_context[:8000]`), preventing Groq context overflow.
-- **Model Formatting Crash Guard:** If the underlying Groq model fails structured XML/JSON tool formatting or emits an invalid schema payload, exception blocks catch the error and inject a synthetic `AIMessage` triggering a safe fallback vector search:
-  ```python
-  AIMessage(
-      content="",
-      tool_calls=[{
-          "name": "retrieve_from_vectorstore",
-          "args": {"query": state["query"], "k": 4},
-          "id": "manual_fallback_123"
-      }]
-  )
-  ```
+#### 3. Termination Conditions & Fallback Guardrails
+- **Retrieval Cap Evaluated First:** `agent_routing` checks `state.get("retrieval_attempts", 0) >= MAX_RETRIEVAL_ATTEMPTS` (`3`) **before** calling `tools_condition(state)`. If reached, it forces transition directly to `generate_answer`.
+- **Single Rewrite Cap:** `after_relevancy_routing` allows at most `1` rewrite (`rewrite_count < 1`). When triggered, `query_rewrite_node` resets `retrieved_docs = []`, resets `retrieval_attempts = 0`, appends a `HumanMessage(rewritten)`, and sends execution back to `agent_node`. If `is_relevant` remains `False` after a rewrite, `generate_answer_node` emits a grounded abstention message rather than answering from irrelevant context.
+- **Malformed Tool Call Fallback:** If `agent_node`'s `lm.invoke()` raises an exception (e.g., invalid tool XML/JSON tags from Groq), an exception handler injects a synthetic `AIMessage` calling `retrieve_from_vectorstore(query=state["query"], k=5)` and increments `retrieval_attempts`.
+- **Router Fallback:** If `router_chain.invoke()` fails structured schema parsing, `router_node` catches the error and defaults to `"retrieve"`.
+- **Context Truncation:** `generate_answer_node` formats all retrieved docs with citation tags `[i] (Title: ... | Section: ... | Page: ...)` and truncates `raw_context` at `6,500` characters (`raw_context[:6500]`).
+
+#### 4. Structured-Output Pydantic Schemas (`backend/models.py`)
+- `BtwRouteDecision`: `needs_web_search: bool`
+- `RouterDecision`: `route: Literal["retrieve", "verify_claim", "direct_answer"]`
+- `RelevancyDecision`: `is_relevant: bool`, `reason: str`
+- `SupersedingPaper`: `title: str`, `url: str`, `summary: str`
+- `ClaimVerificationResult`: `is_superseded: bool`, `verdict_summary: str`, `superseding_papers: list[SupersedingPaper]`
+
+#### 5. State, Persistence & Frontend Layer
+- **Frontend/Backend Split:** Single-process Streamlit app (`app.py` + `ui/`) calling Python backend modules directly (no separate REST API). Auth is absent.
+- **Session Metadata:** `sessions.json` stores `{session_id: {id, name, created_at, is_named}}`.
+- **Conversation Memory:** `MemorySaver` stores LangGraph state in RAM per `thread_id = f"{active_sid}_turn_{current_turn}"`. Turn isolation keeps old tool payloads out of subsequent prompts; live chat UI history lives in `st.session_state.chats` and is reset on server restart (except what `load_session_chats()` can read while in RAM). `/btw` never writes to `st.session_state.chats`, `MemorySaver`, or vector storage.
+
+</details>
 
 ---
 
-## 🛠️ Tech Stack
+## 🧰 Tech Stack
 
-| Layer | Technology | Version | Justification & Usage |
-|:---|:---|:---|:---|
-| **Runtime** | Python | `3.12` | Specified in [`runtime.txt`](runtime.txt) and [`Dockerfile`](Dockerfile) for deployment stability. |
-| **LLM Inference** | Groq (`openai/gpt-oss-120b`) | API | Primary generation, router, agent planning, relevancy evaluation, and claim analysis. Chosen for ultra-low token latency. |
-| **Utility LLM** | Groq (`openai/gpt-oss-20b`) | API | Lightweight model used for autonomous session naming and DeepEval evaluation judging. |
-| **Orchestration** | LangGraph | `1.1.10` | Stateful graph orchestration with cyclic error correction and `MemorySaver` checkpointing. |
-| **Vector Database** | Qdrant Client | `1.17.1` | Local in-memory instance (`:memory:`) or Qdrant Cloud. Eliminates external networking bottlenecks on Streamlit Cloud. |
-| **Sparse Retrieval** | `rank-bm25` (`BM25Okapi`) | `0.2.2` | In-memory tokenized lexical index with disk persistence (`.pkl`) and LRU eviction (max 10 sessions) to prevent container OOM. |
-| **Neural Reranking** | FlashRank (`ms-marco-MiniLM-L-12-v2`) | `0.2.10` | 4MB local ONNX cross-encoder running sub-20ms on CPU with zero API tokens to rerank hybrid RRF candidates. |
-| **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` | `2.2.2` | 384-dimensional dense semantic embeddings; runs locally on CPU with minimal footprint. |
-| **Embedding Caching** | LangChain Classic `CacheBackedEmbeddings` | `1.0.7` | Wraps `LocalFileStore("./embedding_cache/")` to cache dense vectors on disk across sessions. |
-| **Web Search** | Tavily API (`tavily-python`) | `0.7.24` | Search engine optimized for LLM agents; performs live web extraction and arXiv domain scoping. |
-| **Document Loaders** | `pymupdf4llm`, `pymupdf`, `beautifulsoup4`, `arxiv` | `2.1.0`, `1.27.2`, `4.14.3`, `3.0.0` | Structure-aware Markdown PDF extraction preserving tables and headings, plus HTML and arXiv Atom APIs. |
-| **Frontend UI** | Streamlit | `1.57.0` | Interactive web dashboard featuring session sidebars, streaming side channels, and JSON telemetry panels. |
-| **Evaluation** | DeepEval | `4.0.0` | LLM-as-a-judge evaluation harness testing precision, recall, relevancy, and faithfulness. |
+> **Version Note:** Versions below reflect packages verified installed in `.venv` alongside pinned entries in `pyproject.toml` and deployment manifests. Unpinned `requirements.txt` and pinned `pyproject.toml` diverge on several minor versions.
+
+| Layer | Technology | Version (`.venv` / Manifest) | Role in Project |
+| :--- | :--- | :--- | :--- |
+| **Language** | Python | `3.12.13` (venv & `runtime.txt`/`Dockerfile`: `3.12`; `pyproject.toml`/`.python-version`: `3.14`) | Runtime and type hints (`list[dict]`, `str \| None`) |
+| **Orchestration** | `langgraph` | `1.1.10` | Cyclic `StateGraph`, conditional routing, `ToolNode`, `MemorySaver` |
+| **LLM Framework** | `langchain`, `langchain-core`, `langchain-community` | `1.2.18`, `1.4.0`, `0.4.1` | Document model, prompt templates, `@tool`, loaders |
+| **LLM Provider** | Groq (`langchain-groq`, `groq`) | `1.1.2`, `0.37.1` (`pyproject.toml`: `0.4.1`) | Hosts `openai/gpt-oss-120b` and `openai/gpt-oss-20b` |
+| **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` (`langchain-huggingface`) | `5.5.0` / `1.2.2` (`pyproject.toml`: `2.2.2`) | Local 384-dim dense vector encoding (`torch 2.10.0`) |
+| **Embedding Cache** | `langchain-classic` (`CacheBackedEmbeddings`, `LocalFileStore`) | `1.0.7` | Persistent on-disk vector caching under `./embedding_cache/` |
+| **Dense Vector DB** | `qdrant-client`, `langchain-qdrant` | `1.17.1`, `1.1.0` | Qdrant Cloud client with automatic `:memory:` fallback |
+| **Sparse Search** | `rank-bm25` (`BM25Okapi`) | `0.2.2` | Tokenized lexical retrieval with `.pkl` persistence + LRU cache |
+| **Reranker** | `flashrank` (`ms-marco-MiniLM-L-12-v2`) | `0.2.10` | Local ONNX cross-encoder (`~32.9 MiB` cached across 13 files) |
+| **Web Search** | `tavily-python` | `0.7.24` | Web and `site:arxiv.org` retrieval in agent, verifier, `/btw` |
+| **Document Parsing** | `pymupdf4llm`, `pymupdf`, `pypdf`, `arxiv`, `beautifulsoup4`, `lxml` | `2.1`, `1.27.2.3`, `6.10.2`, `3.0.0`, `4.14.3`, `6.1.0` | Structure-aware Markdown PDF extraction, Atom XML lookup, HTML scraping |
+| **Validation** | `pydantic` | `2.13.4` | Structured LLM outputs and tool input bounds (`ge=1, le=10`) |
+| **Web UI** | `streamlit` | `1.57.0` | Dark-mode research cockpit, 4-tab ingestion deck, telemetry & export |
+| **Evaluation** | `deepeval` | `4.0.0` | 5-metric RAG evaluation harness with custom `GroqJudge` |
+| **Env Config** | `python-dotenv` | `1.2.2` | Loads `.env` environment variables locally |
 
 ---
 
 ## ⚖️ Design Decisions & Trade-offs
 
-| Decision | Alternatives Considered | Rationale | Accepted Trade-off |
-|:---|:---|:---|:---|
-| **In-Memory Qdrant (`:memory:`)** | Qdrant Cloud cluster, ChromaDB, SQLite-vec. | Streamlit Community Cloud restricts inbound/outbound ports and custom C-extensions. In-memory Qdrant requires zero network infrastructure and boots instantly. | Vector indices reside entirely in ephemeral RAM; restarting the Streamlit app process purges indexed documents. |
-| **Turn-Isolated Graph Thread IDs** | Maintaining a single persistent `thread_id` across all session turns. | Re-sending massive tool outputs, full-text chunks, and raw agent scratchpads across multiple turns degrades the 8,000-character context window and causes router drift. | Graph state memory does not natively resolve conversational co-references across turns (e.g., "explain its second point"). |
-| **Checking Retrieval Cap Before Tool Routing** | Relying solely on `tools_condition(state)` to route tool calls. | When Groq encountered formatting crashes, fallback tool calls repeatedly triggered `tools_condition == "tools"`, causing an infinite execution loop. Checking `retrieval_attempts >= 3` first guarantees termination. | If the model legitimately needs more than 3 tool calls to answer a multifaceted query, it is forcefully terminated and answered with partial context. |
-| **Synthetic Fallback Tool Injection** | Letting the pipeline fail fast with an exception message to the user. | Fast inference models on Groq occasionally emit malformed tool call syntax. Catching exceptions and injecting a synthetic `retrieve_from_vectorstore` call ensures 100% pipeline completion. | If the model's true intent was a web search, the fallback will forcefully execute a local vector store search instead. |
-| **Isolated `/btw` Side Channel** | Routing all user inputs through the central LangGraph pipeline. | Casual inquiries ("what is the weather in Delhi?", "explain softmax") trigger vector lookups or clutter research state inspector logs. | The user must explicitly prefix off-topic prompts with `/btw` to engage the lightweight side channel. |
-| **Disk-Backed Embedding Cache** | Computing embeddings in-memory on every document upload. | Academic preprints contain hundreds of identical chunks across repeated uploads. `LocalFileStore("./embedding_cache/")` avoids redundant CPU matrix math. | Consumes local storage under `./embedding_cache/` that must be cleared manually if disk capacity is constrained. |
+| Decision | Alternatives Considered | Why This Choice | Trade-off Accepted |
+| :--- | :--- | :--- | :--- |
+| **Dual-model split (`120B` Gen/Router + `20B` Aux)** | Running `openai/gpt-oss-120b` everywhere or `20B` everywhere (`rag_graph.py`) | `8B`/smaller models previously failed tool-calling and schema validation (`da71fa4`, `8ed94f1`), while `120B` handles routing, tool planning, and synthesis and `20B` runs deterministic contextualization, relevancy checks, rewrites, claims, and session naming quickly. | Consumes separate Groq quotas for both `120B` and `20B`; `verify_claim_node` and `relevancy_check_node` depend on `20B` schema adherence (where `relevancy_check` has no fallback if structured output fails). |
+| **3-stage Hybrid Retrieval (Qdrant + BM25 + FlashRank + Sentence Pruning)** | Single-stage dense cosine top-$k$ retrieval (baseline `4da8145`) | Dense-only retrieval missed exact keywords and pulled noisy chunks (`0.6069` Contextual Relevancy baseline). Adding BM25 RRF (`fetch_k=15`), FlashRank (`min_score=0.20`), and `prune_chunk_sentences` raised Precision to `1.0000`, Faithfulness to `1.0000`, and Contextual Relevancy to `0.7202`. | Slightly higher per-turn CPU/RAM work for BM25 `.pkl` persistence (`~32.9 MiB` local FlashRank ONNX model); fixed `top_k=4` in `hybrid_search` (up to `5` via tool) can still clip coverage on broad multi-part comparative questions (`Recall 0.50` on Cases 1 & 4). |
+| **Optional Qdrant Cloud with `:memory:` Fallback** | Strictly managed Qdrant Cloud or strictly `:memory:` (`623b9cf`) | Streamlit Cloud restricts custom networking while local evaluation & cloud persistence benefit from Qdrant Cloud when `QDRANT_URL`/`QDRANT_API_KEY` are configured (`vector_store.py`). | When falling back to `:memory:`, indexed vectors vanish on app restart even though BM25 `.pkl` caches remain on local disk. |
+| **Turn-Isolated Graph Threads (`{sid}_turn_{n}`) + `chat_history[-4:]` Contextualizer** | Single continuous LangGraph `thread_id` per session | Sharing one `thread_id` across turns replays large retrieved chunks and `ToolMessage`s into Groq's `8,000 TPM` window, risking router drift and 429 throttling. Isolating turns and rewriting pronouns cleanly in `contextualize_query_node` keeps context compact. | Because `router_node` and `verify_claim_node` still read `state["messages"][-1].content` rather than `state["query"]`, follow-up queries with ambiguous pronouns can reach routing unrewritten; multi-turn UI messages live in ephemeral `st.session_state.chats`. |
+| **Checking `MAX_RETRIEVAL_ATTEMPTS >= 3` Before `tools_condition` + Fallback Injection** | Checking `tools_condition` first or failing fast on tool XML parse errors (`6fcb905`) | When Groq threw tool formatting errors, the catch block returned a synthetic tool call—causing `tools_condition` to loop endlessly when checked before the attempt cap. Checking `attempts >= 3` first guarantees termination, and fallback ensures recovery. | If the agent fails formatting while intending a `web_search`, the fallback executes `retrieve_from_vectorstore(k=5)` instead; queries needing `> 3` searches terminate with partial context. |
+| **Prompt/Context Truncation Caps (`6,500` chars in RAG; `1,200` / `5x550` chars in `evaluate.py`)** | Passing full retrieved chunks and untruncated answers to Groq | Groq's on-demand `8,000 TPM` window on `120B`/`20B` rejects oversized single requests (`429`/`413`). Capping synthesis context at `6,500` chars and eval slices keeps requests within the window. | Chunks ranked lower or past char `6,500` are cut off before synthesis; DeepEval judges truncated `1,200`-char prefixes of answers and `550`-char chunk prefixes rather than full-length text. |
+| **Prefix-Triggered `/btw` Side Channel** | Routing all prompts through LangGraph | Prevents tangential questions from modifying chat history, triggering unnecessary document retrieval, or consuming `MemorySaver` state (`btw_handler.py`). | Users must prefix off-topic questions with `/btw `; `/btw` exchanges disappear on app reload. |
 
 ---
 
 ## 📊 Data & Models
 
-### Models Employed
+### Benchmark Corpus & Evaluation Dataset
 
-| Model Identifier | Provider / Platform | Primary Role | Configuration / Parameters |
-|:---|:---|:---|:---|
-| `openai/gpt-oss-120b` | Groq LPUs | Primary Agent, Router, Answer Generator, Claim Verifier | `request_timeout=30`, `max_retries=1`, temperature default |
-| `openai/gpt-oss-20b` | Groq LPUs | Session Title Generation, Evaluation Judge | Formatted with `response_format={"type": "json_object"}`, `max_retries=3` |
-| `sentence-transformers/all-MiniLM-L6-v2` | HuggingFace / Local CPU | Document & Query Embeddings | 384 dimensions, cosine distance metric |
+- **Source Document:** [`documents/Openclaw_Research_Report.pdf`](documents/Openclaw_Research_Report.pdf) — `940,600` bytes (~`919 KiB`), **`34` PDF pages**, yielding **`116` chunks** under `pymupdf4llm` structure-aware extraction with `CHUNK_SIZE = 800` and `CHUNK_OVERLAP = 150`.
+- **Golden Q&A Dataset:** [`goldens.json`](goldens.json) — `10` synthetic multi-part evaluation pairs (`input`, `expected_output`) covering Moltbot/OpenClaw messaging channels, cross-session memory, model backends, local-vs-VPS trade-offs, delegated execution risks, security vulnerabilities, agentic workflows, enterprise vs. power-user fit, overall rating justification, and credential storage comparisons (`10` items total, no train/val split — used purely for evaluation).
 
-### Evaluation Dataset
-- **Golden Evaluation Document:** [`documents/Openclaw_Research_Report.pdf`](./documents/Openclaw_Research_Report.pdf) (940 KB technical research report detailing autonomous agent architectures, local/VPS deployment tradeoffs, security vulnerabilities, and credential management).
-- **Test Suite:** [`goldens.json`](./goldens.json) containing 10 synthetic technical Q&A pairs generated via DeepEval's `Synthesizer` covering complex multi-part questions (memory types, security risks, model backends, self-hosted vs enterprise tradeoffs).
+### Models & Embeddings Used
+
+| Identifier | Host / Provider | Purpose | Key Settings in Code |
+| :--- | :--- | :--- | :--- |
+| `openai/gpt-oss-120b` | Groq API | Intent router (`router_chain`), tool-planning agent (`retrieval_llm`), RAG answer synthesis (`llm`), `direct_answer`, `/btw` router & streaming | `PAPEER_LLM_GEN` default; `request_timeout=45`, `max_retries=2` in [`rag_graph.py`](backend/rag_graph.py); default timeout in [`btw_handler.py`](backend/btw_handler.py) |
+| `openai/gpt-oss-20b` | Groq API | Pre-router contextualizer, `relevancy_check`, `query_rewrite`, `verify_claim`, session auto-naming (`app.py`), DeepEval `GroqJudge` (`evaluate.py`) | `PAPEER_LLM_FAST` default; `request_timeout=20`, `max_retries=2`; in `GroqJudge`: `response_format={"type": "json_object"}`, `max_tokens=4096`, `request_timeout=60`, `max_retries=2` |
+| `sentence-transformers/all-MiniLM-L6-v2` | HuggingFace / Local CPU | Dense document & query embeddings (cached to `./embedding_cache/`) | `EMBEDDING_DIM = 384`, Cosine similarity (`Distance.COSINE`), `query_embedding_cache=True` |
+| `ms-marco-MiniLM-L-12-v2` (`flashrank`) | Local ONNX on CPU | Stage-2 cross-encoder reranking of hybrid RRF candidates (`~32.9 MiB` cached across 13 files) | `top_k=4` (in `hybrid_search`), `min_score=0.20` (always keeps at least top `2` candidates) |
+
+<details>
+<summary><strong>Click to expand: System Prompts Used Across Pipeline Nodes</strong></summary>
+
+- **Contextualizer (`CONTEXTUALIZE_PROMPT`):** Rewrites ambiguous pronouns/references into standalone search queries using `chat_history[-4:]`; returns input unchanged if already self-contained.
+- **Router (`ROUTER_PROMPT`):** Classifies queries into `retrieve` (uploaded paper content OR live/mutable facts), `verify_claim` (check if a claim is still valid/superseded), or `direct_answer` (stable general knowledge). Defaults to `retrieve` when uncertain.
+- **Retrieval Planner (`RETRIEVE_SYSTEM`):** Instructs the `120B` agent on selecting between `retrieve_from_vectorstore` and `web_search`, limiting to one tool per turn without emitting a final prose answer.
+- **Relevancy Judge (`RELEVANCY_CHECK_SYSTEM`):** Lenient binary relevance check (`RelevancyDecision`) on up to the first `3` chunk snippets (`[:300]` chars each).
+- **Query Rewriter (`QUERY_REWRITE_SYSTEM`):** Reformulates failed queries with alternative domain keywords as plain text.
+- **Claim Verifier (`CLAIM_ANALYSIS_PROMPT`):** Evaluates `5` general + `5` `site:arxiv.org` Tavily snippets (`[:300]` chars each), preferring `arxiv.org` URLs verbatim and capping `superseding_papers` at `3`.
+- **Grounded Answer Synthesizer (`generate_answer_node`):** Enforces inline `[1]`, `[2]` citations bound strictly to retrieved context blocks without external extrapolation (`raw_context[:6500]`).
+
+</details>
 
 ---
 
 ## 🧪 Evaluation & Results
 
 ### Methodology
-The retrieval and generation pipeline was systematically benchmarked in [`evaluate.py`](evaluate.py) against 10 multi-part technical test cases using **DeepEval 4.0.0**. 
-- **Judge Model:** Custom `GroqJudge` wrapping `openai/gpt-oss-20b` configured with strict JSON output schemas and exponential backoff retry loops.
-- **Pass Threshold:** Minimum score of `0.70` across all metrics.
-- **Execution Strategy:** Single-threaded execution with a 2-second cooldown between metrics to avoid free-tier API rate limits.
-- **Evaluation Source:** All metrics below are calculated directly from the committed test run in [`eval_results.json`](./eval_results.json).
 
-### Measured Performance Results
+- **Harness & Date:** Executed via [`evaluate.py`](evaluate.py) between **`2026-11-10T07:14:13Z`** and **`2026-11-11T18:31:05Z`**.
+- **Dataset & Corpus:** `10` queries from [`goldens.json`](goldens.json) evaluated against [`documents/Openclaw_Research_Report.pdf`](documents/Openclaw_Research_Report.pdf) (`116` chunks indexed into Qdrant Cloud + `BM25Okapi` via `add_paper`).
+- **Pipeline Under Test:** `openai/gpt-oss-120b` (RAG Router + Generator), `openai/gpt-oss-20b` (Contextualizer, Relevancy Check, Query Rewrite), Qdrant Dense + BM25 RRF (`fetch_k=15`) + FlashRank reranking + `prune_chunk_sentences`. Each golden query had `" as per the report in knowledge base"` appended during evaluation.
+- **Judge Setup & Throttling Controls:** DeepEval `4.0.0` with custom `GroqJudge` wrapping **`openai/gpt-oss-20b`** (`response_format={"type": "json_object"}`, `max_tokens=4096`, `asyncio.Semaphore(1)` serialized calls, `2.0s` per-call delay, `4s` inter-metric / `20s` inter-case sleep). Because Groq enforces an `8,000 TPM` window on `openai/gpt-oss-20b`, `evaluate.py` trims `retrieval_context` to `[c[:550] for c in ctx[:5]]` and `actual_output` to `answer[:1200]` before judging.
+- **Pass Threshold:** `0.70` per metric per case.
 
-| Metric | Measured Average | Pass Count (Score $\ge 0.70$) | Pass Rate | Technical Interpretation |
-|:---|:---:|:---:|:---:|:---|
-| **Contextual Precision** | **0.8443** | 8 / 10 | **80.0%** ✅ | **Strongest Result.** Retrieved document chunks that contain relevant answers are ranked at or near the top of the vector search results. |
-| **Answer Relevancy** | **0.7488** | 6 / 10 | **60.0%** ⚠️ | Answers directly address user questions without excessive deviation, though multi-part prompts occasionally introduce tangential summaries. |
-| **Contextual Recall** | **0.6885** | 4 / 10 | **40.0%** ⚠️ | Questions demanding 5+ distinct technical tradeoffs (e.g., comparing local vs. VPS) exceed the recall capability of a fixed $k=4$ chunk limit. |
-| **Faithfulness** | **0.6217** | 4 / 10 | **40.0%** ⚠️ | When retrieved chunks partially omit granular details, the generator occasionally extrapolates facts or attributes capabilities to the wrong memory subsystem. |
-| **Contextual Relevancy** | **0.6069** | 2 / 10 | **20.0%** ❌ | **Weakest Result.** Standard dense embeddings retrieve chunks that are topically adjacent to the document but contain irrelevant peripheral discussion. |
+### Current Benchmark Results (`eval_results.json`, `n = 10`)
 
-### Failure-Mode Analysis
+| Metric | Mean Score | Passed ($\ge 0.70$) | Threshold | Technical Interpretation |
+| :--- | :---: | :---: | :---: | :--- |
+| **Contextual Precision** | **1.0000** | 10 / 10 (100%) | 0.70 | Every retrieved chunk ranked relevant evidence cleanly at the top across all 10 cases. |
+| **Answer Relevancy** | **1.0000** | 10 / 10 (100%) | 0.70 | Synthesized `120B` responses directly answered all prompt sub-questions without off-topic padding. |
+| **Faithfulness** | **1.0000** | 10 / 10 (100%) | 0.70 | Zero hallucinated or contradicted statements relative to retrieved context under the `20B` judge. |
+| **Contextual Recall** | **0.8086** | 8 / 10 (80%) | 0.70 | High overall ground-truth coverage, though `2` multi-part queries still missed secondary expected sentences. |
+| **Contextual Relevancy** | **0.7202** | 6 / 10 (60%) | 0.70 | Crosses the `0.70` mean threshold, though `4` cases contained topically adjacent but non-matching sentences within returned chunks. |
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│ Contextual Precision: 84.4%  ████████████████████████████████░░░░░░░░  │
-│ Answer Relevancy:     74.9%  ██████████████████████████░░░░░░░░░░░░░░  │
-│ Contextual Recall:    68.9%  ████████████████████░░░░░░░░░░░░░░░░░░░░  │
-│ Faithfulness:         62.2%  ████████████████░░░░░░░░░░░░░░░░░░░░░░░░  │
-│ Contextual Relevancy: 60.7%  ██████████████░░░░░░░░░░░░░░░░░░░░░░░░░░  │
-└────────────────────────────────────────────────────────────────────────┘
-```
+### Baseline-to-Current Progression (Verified Across Git Commits)
 
-1. **Contextual Relevancy Bottleneck (0.6069):**
-   - *Root Cause:* Bi-encoder dense retrieval (`all-MiniLM-L6-v2`) computes similarity over the entire 1,000-character chunk. In technical reports, chunks frequently combine relevant technical statements with off-topic commentary (e.g., societal impacts, competitor overviews).
-   - *Evidence:* In Test Case 1, DeepEval penalizes chunks because sentences regarding employment impact and developer privilege were bundled inside the retrieved window.
-2. **Contextual Recall Droop on Dense Queries (0.6885):**
-   - *Root Cause:* Queries demanding exhaustive multi-category comparisons (e.g., *"Compare local vs VPS Moltbot tradeoffs: privacy, latency, uptime, cost, security, hardware access"*) span across 4–6 separate document pages. Constraining retrieval to $k=4$ chunks mathematically caps the achievable recall.
+| Run / Commit | Retrieval & Judge Configuration | Context Precision | Context Recall | Context Relevancy | Answer Relevancy | Faithfulness |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **`4da8145` Baseline** *(Oct 2, 2026)* | Dense Qdrant only (`1000`-char chunks) · Pre-hybrid/reranker | `0.8443` (8/10) | `0.6885` (4/10) | `0.6069` (2/10) | `0.7488` (6/10) | `0.6217` (4/10) |
+| **`2e50171` Upgrade** *(Nov 7, 2026)* | `pymupdf4llm`, `800`-char chunks, BM25+RRF, FlashRank (`min_score=0.20`), sentence pruning · `20B` Router/Aux, `120B` Gen, `20B` Judge | `0.7867` (7/10) | `0.8167` (7/10) | `0.4835` (4/10) | `0.9838` (10/10) | `0.8833` (9/10) |
+| **`88de181` Checkpoint** *(Nov 7, 2026)* | Same hybrid pipeline checkpoint recorded in `88de181:eval_results.json` | `0.9250` (9/10) | `0.7667` (6/10) | `0.5661` (4/10) | `0.9838` (10/10) | `0.7833` (8/10) |
+| **Latest Run (`eval_results.json`)** *(Nov 10–11, 2026)* | **`120B` Router + Gen / `20B` Aux** + Qdrant/BM25 RRF + FlashRank + sentence pruning · Consistent **`20B` Judge** (`max_tokens=4096`) across all 10 cases | **1.0000 (10/10)** | **0.8086 (8/10)** | **0.7202 (6/10)** | **1.0000 (10/10)** | **1.0000 (10/10)** |
 
-### Reproducing the Evaluation
-To run the automated evaluation harness against the research report:
+### Error & Failure-Mode Analysis
+
+- **Contextual Relevancy Bottlenecks (4 failing cases recorded in local `eval_logs/`):**
+  - **Case 1 (`0.2667`):** `retrieve_from_vectorstore` returned `5` chunks (`chunks 3–5` came from Verdict/Executive Summary/Strategic Takeaways sections discussing general project popularity and risk rather than `9+` messaging channels).
+  - **Case 3 (`0.3200`):** Chunk `1` held all supported LLM backends cleanly (Precision `1.00`, Recall `1.00`), while chunks `2–5` pulled broader competitive/security risks from the same paper.
+  - **Case 7 (`0.6087`) & Case 10 (`0.6957`):** Adjacent Moltbot sandboxing/commentary sentences inside retrieved chunks lowered statement-level relevancy just under `0.70`.
+- **Contextual Recall Gaps (2 failing cases):**
+  - **Case 1 (`0.5000`) & Case 4 (`0.5000`):** Multi-facet prompts (combining cross-session memory + Telegram example in Case 1; comparing 6 tradeoffs in Case 4) missed 1–2 specific sentences when `k=5` focused heavily on high-scoring sections.
+- **Evaluation Harness Fixes Added During Benchmarking:**
+  - **Groq `400 json_validate_failed` truncation:** `openai/gpt-oss-20b` emits reasoning tokens before JSON, exhausting `max_tokens=2048` on Case 4; fixed in [`evaluate.py`](evaluate.py) by raising `max_tokens=4096` and retrying `400`/`json_validate_failed`.
+  - **Free-tier `8k TPM` / `200k TPD` aborts:** Added `asyncio.Semaphore(1)`, Groq retry-after parser `_extract_wait_seconds()`, `DailyQuotaExhaustedError` exit when wait `> 480s`, and mid-case checkpointing (`eval_logs/case_XX_partial.json`).
+
+<details>
+<summary><strong>Click to expand: Full 10-Case Score Table & Reproduction Commands</strong></summary>
+
+| Case | RAG Latency | Chunks | Precision | Recall | Context Relevancy | Answer Relevancy | Faithfulness |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1** | `9.36s` | 5 | 1.00 | 0.50 | 0.27 | 1.00 | 1.00 |
+| **2** | `10.41s` | 2 | 1.00 | 0.88 | 0.78 | 1.00 | 1.00 |
+| **3** | `9.15s` | 5 | 1.00 | 1.00 | 0.32 | 1.00 | 1.00 |
+| **4** | `11.36s` | 5 | 1.00 | 0.50 | 0.93 | 1.00 | 1.00 |
+| **5** | `11.55s` | 2 | 1.00 | 0.83 | 0.83 | 1.00 | 1.00 |
+| **6** | `16.84s` | 5 | 1.00 | 0.90 | 1.00 | 1.00 | 1.00 |
+| **7** | `10.81s` | 3 | 1.00 | 0.73 | 0.61 | 1.00 | 1.00 |
+| **8** | `10.01s` | 5 | 1.00 | 0.75 | 0.95 | 1.00 | 1.00 |
+| **9** | `10.46s` | 5 | 1.00 | 1.00 | 0.82 | 1.00 | 1.00 |
+| **10** | `10.88s` | 4 | 1.00 | 1.00 | 0.70 | 1.00 | 1.00 |
+
+#### Reproduce the Evaluation
 ```bash
-# Ensure API keys are active
-export GROQ_API_KEY="gsk_..."
-export TAVILY_API_KEY="tvly-..."
-
-# Execute DeepEval pipeline
+# Resumes automatically from any incomplete case/metric under eval_logs/
 python evaluate.py
+
+# Re-run a specific case or slice
+python evaluate.py --case 4
+python evaluate.py --start 6 --end 10
+
+# Archive existing eval_results.json + eval_logs/ and run fresh from Case 1
+python evaluate.py --reset
 ```
-*Note: Results are incrementally written to `eval_results.json` after each question completes.*
+*Consolidated scores write to [`eval_results.json`](eval_results.json) (and local `eval_results.backup.json`), while per-case JSON and `.log` traces write to `eval_logs/case_01.{json,log}` – `case_10.{json,log}`.*
+
+</details>
 
 ---
 
-## 🧪 Testing & Quality
+## 🧭 Testing & Quality
 
-- **Automated Evaluation Suite:** [`evaluate.py`](evaluate.py) serves as the primary system-level verification suite, evaluating 5 core RAG metrics against ground truth.
-- **Data Validation & Typing:** Pydantic v2 schemas in [`backend/models.py`](backend/models.py) enforce strict typing on all structured model outputs (`RouterDecision`, `RelevancyDecision`, `ClaimVerificationResult`, `BtwRouteDecision`).
-- **Tool Argument Boundaries:** `RetrieverInput` and `WebSearchInput` enforce bounds on tool calling ($1 \le k \le 10$, $1 \le \text{max\_results} \le 10$) using Pydantic `Field(ge=1, le=10)`.
+| Check Type | Current Coverage | Location | How to Run |
+| :--- | :--- | :--- | :--- |
+| **Automated RAG Evaluation** | `10` end-to-end golden queries across `5` DeepEval metrics | [`evaluate.py`](evaluate.py), [`goldens.json`](goldens.json) | `python evaluate.py` |
+| **Ad-hoc Feature Integration Script** | Manual assertions on `load_pdf` chunk count/metadata, BM25 `.pkl` persistence, FlashRank `hybrid_search`, `contextualize_query_node`, and citation tags | `scratch/test_all_additions.py` *(local git-ignored directory)* | `python scratch/test_all_additions.py` |
+| **Runtime Schema Validation** | Pydantic v2 models (`RouterDecision`, `RelevancyDecision`, `ClaimVerificationResult`, `BtwRouteDecision`, `RetrieverInput`, `WebSearchInput`) | [`backend/models.py`](backend/models.py), [`backend/rag_graph.py`](backend/rag_graph.py) | Enforced automatically at runtime |
+| **Unit Tests (`tests/`) / Linting / CI** | **None yet** — no `tests/` directory, no `ruff`/`black`/`flake8` config, and no `.github/workflows/` CI files exist. (`pytest==9.0.3` is only present in `pyproject.toml` via DeepEval dependencies.) | — | Not configured |
 
 ---
 
 ## 🔒 Security, Privacy & Reliability
 
-### Secrets & Environment Isolation
-- **Credential Handling:** Real API keys are never stored in the repository. Local execution loads keys from `.env` via `python-dotenv`.
-- **Streamlit Cloud Bridge:** [`streamlit_secrets_bridge.py`](streamlit_secrets_bridge.py) injects `st.secrets` into `os.environ` before application initialization, allowing downstream backend libraries to access keys via standard environment calls.
-- **Git Hygiene:** `.env` and `.streamlit/secrets.toml` are explicitly ignored in [`.gitignore`](.gitignore).
-
-### Data Isolation & Persistence Model
-- **Collection Namespace Isolation:** Vector data is strictly isolated by session ID (`papeer_{session_id.replace('-', '_')}`). One session cannot query or access document chunks loaded into another session.
-- **Memory Lifetime:** In-memory Qdrant data exists solely within the RAM of the active Streamlit worker process. Terminating or restarting the server purges all uploaded documents.
-
-### Reliability & Fault Tolerance
-- **Inference Timeouts:** Groq calls enforce a strict 30-second timeout (`request_timeout=30`) to prevent hanging processes during upstream platform degradation.
-- **Infinite Loop Prevention:** `agent_routing` evaluates the retrieval cap (`retrieval_attempts >= 3`) before inspecting tool conditions, preventing infinite agent cycles when Groq returns errors.
-- **Context Safeguards:** Prompts sent to `generate_answer_node` are hard-truncated at 8,000 characters to prevent context-window overflow and token exhaustion.
+- **Secrets Handling:** API credentials (`GROQ_API_KEY`, `TAVILY_API_KEY`, optional `QDRANT_URL` / `QDRANT_API_KEY`) load from `.env` via `python-dotenv` or from `st.secrets` via [`streamlit_secrets_bridge.py`](streamlit_secrets_bridge.py). Both `.env` and `.streamlit/secrets.toml` are listed in [`.gitignore`](.gitignore).
+- **Input Validation & Bounds:** UI file uploads accept only `["pdf", "txt", "md", "markdown"]`. `RetrieverInput` and `WebSearchInput` enforce `1 <= k <= 10` and `1 <= max_results <= 10` via Pydantic `Field(ge=1, le=10)`. ArXiv ID extraction uses `_ARXIV_ID_RE` (`r"(\d{4}\.\d{4,5}(?:v\d+)?)"`) and strips version suffixes before fetching PDFs.
+- **Session Isolation Model (No Auth/RBAC):** Each chat session gets a distinct UUID and maps to its own Qdrant collection (`papeer_{session_id.replace('-', '_')}`) and BM25 index file (`{safe_sid}.pkl`). There is **no user authentication or RBAC**: all visitors to a shared deployment see the same session list stored in [`sessions.json`](sessions.json).
+- **Retention & Cleanup:** [`cleanup_session(session_id)`](backend/vector_store.py#L216-L230) deletes the in-memory BM25 entry, on-disk `.pkl`, and Qdrant collection, though **`app.py` currently does not expose a UI delete button** calling it. When running in Qdrant `:memory:` mode, vectors are cleared when the app process stops; when connected to Qdrant Cloud, collections remain until explicitly deleted.
+- **Rate Limits, Retries & Timeouts:**
+  - `LLM_GEN` (`120B`): `request_timeout=45s`, `max_retries=2`; `LLM_FAST` (`20B`): `request_timeout=20s`, `max_retries=2`.
+  - `generate_answer_node` sleeps `5s` on `429`/rate-limit exceptions before re-raising.
+  - `agent_node` and `router_node` recover from LLM schema/tool formatting failures using safe defaults (`retrieve`) or synthetic `retrieve_from_vectorstore(k=5)` calls, bounded by `MAX_RETRIEVAL_ATTEMPTS = 3` and `rewrite_count < 1`.
+- **Observability:** Every assistant turn renders an expandable `TELEMETRY TRACE · TURN N` JSON snapshot (`_serialize_state` truncates stored message/doc previews to `300` chars in UI state) and status pills (`agent-step-pill`) driven by `graph.stream(..., stream_mode="updates")`. Evaluation runs write human-readable `.log` and structured `.json` traces locally under `eval_logs/`.
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Python `3.12` (recommended; `3.10`–`3.12` supported).
-- [Groq API Key](https://console.groq.com/) (Free Tier available).
-- [Tavily API Key](https://tavily.com/) (Free Tier available: 1,000 searches/month).
 
-### 1. Clone & Set Up Virtual Environment
+- **Python `3.12`** recommended (matches active `.venv` `3.12.13`, `runtime.txt`, and `Dockerfile`; note `.python-version` and `pyproject.toml` list `3.14`)
+- **Groq API key** (`console.groq.com`) — required
+- **Tavily API key** (`tavily.com`) — required for `web_search`, `verify_claim`, and web `/btw`
+- **Qdrant Cloud URL & API key** — optional (automatically uses local Qdrant `:memory:` if omitted)
+
+### 1. Clone & Create Virtual Environment
 
 ```bash
 git clone https://github.com/dummycodertech/research-assistant-agentic-rag.git
 cd research-assistant-agentic-rag
 
-# Create virtual environment
 python -m venv .venv
-
-# Activate on Linux/macOS:
+# Linux / macOS:
 source .venv/bin/activate
-# Activate on Windows (PowerShell):
-.venv\Scripts\Activate.ps1
+# Windows (PowerShell):
+.\.venv\Scripts\Activate.ps1
 ```
 
-### 2. Install Dependencies
+### 2. Install Dependencies & Pre-Cache Embeddings
 
 ```bash
 pip install -r requirements.txt
-```
-
-### 3. Pre-Download the Embedding Model
-Avoid cold-start latency on first startup by downloading the MiniLM weights to your local cache:
-```bash
 python download_model.py
 ```
 
-### 4. Configure Environment Variables
-Create a `.env` file in the project root:
-```ini
-GROQ_API_KEY=gsk_your_groq_api_key_here
-TAVILY_API_KEY=tvly-your_tavily_api_key_here
-```
+*(Note: Running `evaluate.py` also requires `deepeval`, which is in `pyproject.toml` rather than `requirements.txt` — install with `pip install deepeval==4.0.0` if running benchmarks.)*
 
-### 5. Launch the Application
+### 3. Configure Environment Variables
+
+Copy [`.env.example`](.env.example) to `.env` and add your keys:
+
+| Variable | Purpose | Required? | Where to Get It | Example Placeholder |
+| :--- | :--- | :---: | :--- | :--- |
+| `GROQ_API_KEY` | Authenticates `120B`/`20B` Groq LPU inference & DeepEval judge | **Yes** | [console.groq.com](https://console.groq.com/) | `gsk_your_groq_api_key_here` |
+| `TAVILY_API_KEY` | Powers `web_search`, `verify_claim`, and `/btw` live web answers | **Yes** | [tavily.com](https://tavily.com/) | `tvly-your_tavily_api_key_here` |
+| `QDRANT_URL` | External Qdrant Cloud endpoint (falls back to `:memory:` if unset) | Optional | [cloud.qdrant.io](https://cloud.qdrant.io/) | `https://your-cluster-id.aws.cloud.qdrant.io:6333` |
+| `QDRANT_API_KEY` | Auth key for Qdrant Cloud (paired with `QDRANT_URL`) | Optional | [cloud.qdrant.io](https://cloud.qdrant.io/) | `your_qdrant_api_key_here` |
+| `PAPEER_LLM_GEN` | Override primary generator/router/agent model (`rag_graph.py`) | Optional | Defaults to `openai/gpt-oss-120b` | `openai/gpt-oss-120b` |
+| `PAPEER_LLM_FAST` | Override contextualizer/check/rewrite/verifier model (`rag_graph.py`) | Optional | Defaults to `openai/gpt-oss-20b` | `openai/gpt-oss-20b` |
+
+### 4. Run & Smoke Test
 
 ```bash
 streamlit run app.py
 ```
-Open your browser to `http://localhost:8501`.
 
-### 6. Smoke Test Verification
-1. Click **+ New Chat** in the sidebar.
-2. In the **ArXiv Papers** input, enter `1706.03762` and click **Load ArXiv Paper**.
-3. Verify that `Attention Is All You Need` appears in the **Loaded Documents** list.
-4. Ask: *"What are the dimensions of the keys and queries in the multi-head attention mechanism?"*
-5. Confirm the assistant responds with $d_k = 64$ and that the **Graph state** expander shows `is_relevant: true`.
-6. Run `/btw What is the capital of France?` and verify that the response streams immediately with a side-channel notice.
+Open `http://localhost:8501` and verify end-to-end operation:
+1. Click **`⚡ Load Benchmark Paper · Attention Is All You Need (arXiv:1706.03762)`** in the empty-state HUD (or use the **ArXiv Papers** tab).
+2. Confirm **`Loaded Documents (1)`** lists the indexed paper.
+3. Ask: `"Summarize the core methodology, key findings, and benchmark results of the loaded papers."`
+4. Verify the assistant replies with `[1]`, `[2]` citations, expands **`📚 VERIFIED SOURCE CITATIONS`**, and displays `TELEMETRY TRACE · TURN 1` with `route: "retrieve"` and `is_relevant: true`.
+5. Run `/btw What is softmax?` and verify streaming output arrives with the side-channel caption (`Side-channel response — not persisted to session history.`).
 
 ---
 
 ## 💻 Usage
 
-### Typical Interaction Workflows
+### Streamlit Web Cockpit Workflows
 
-#### 1. Ingestion of Research Documents
-- **PDF Upload:** Use the sidebar file uploader to supply technical papers or internal reports (`.pdf`, `.txt`, `.md`).
-- **ArXiv Loading:** Enter an arXiv identifier (`2310.06825`) or a title phrase (`Attention Is All You Need`). The system downloads the raw PDF from arXiv and extracts text via PyMuPDF.
-- **Web Pages:** Paste documentation or blog URLs to index HTML content.
+1. **Corpus Ingestion Deck (4 Tabs):**
+   - **Upload Files:** Upload one or more `.pdf`, `.txt`, `.md`, or `.markdown` files and click **Add to Corpus**.
+   - **Web Pages:** Paste one or more URLs (one per line) and click **Fetch & Index**.
+   - **ArXiv Papers:** Enter a bare ID (`1706.03762`) or title phrase (`Attention Is All You Need`) and click **Fetch ArXiv**.
+   - **Loaded Documents (`N`):** View indexed document titles in the active session collection.
+2. **Research Starters (`2x2` Bento Cards in empty state):**
+   - `Summarize Key Contributions` (`retrieve`), `Verify Academic Claim` (`verify_claim`), `Web Literature Search` (Tavily live search via `retrieve`), or `Concept Explainer (/btw)`.
+3. **Interactive Inspection & Export:**
+   - Beneath every turn, inspect **`LITERATURE CLAIM VERIFICATION`** cards (when triggered), **`📚 VERIFIED SOURCE CITATIONS`**, **`TELEMETRY TRACE · TURN N`**, or click **`⬇ Export Note (.md)`** to download `papeer_research_turn_{N}.md`.
 
-#### 2. Querying Uploaded Documents
-```
-User: How does the model prevent position-wise information leakage in the decoder?
-Assistant: As detailed in the paper, position-wise information leakage in the decoder is prevented by modifying the self-attention sub-layer to incorporate masking...
-```
-*(View full LangGraph execution telemetry in the expander beneath the message).*
+### Worked Example (Grounded Paper Q&A from `eval_results.json` Case 3)
 
-#### 3. Verifying an Academic Claim
-```
-User: Is the claim that LSTM networks outperform Transformer architectures for long-context translation still valid?
-Assistant: 
-**Claim Verification Result**
-> Is the claim that LSTM networks outperform Transformer architectures for long-context translation still valid?
+```text
+Input: Which LLM backends does Moltbot support, and how can users switch providers seamlessly?
 
-**Verdict:** This claim has been superseded. Modern literature consistently establishes that Transformer-based architectures with rotary or linear attention outperform recurrent networks on long-context benchmarks.
+Output:
+**Supported LLM back-ends**
+- Anthropic Claude – Sonnet and Opus variants
+- OpenAI – GPT-4 and GPT-4 Turbo
+- Google Gemini
+- Local models via Ollama
+- Local models via LM Studio
+- AWS Bedrock integration
+(Source: [1])
 
-**Superseding Papers:**
-1. **Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention**
-   Demonstrates linear complexity transformers matching or exceeding LSTM capabilities.
-   Link: https://arxiv.org/abs/2006.16236
+**Seamless provider switching**
+Moltbot is built as a model-agnostic platform; the architecture lets users select any of the
+supported back-ends and change the provider without having to re-configure the entire system.
+(Source: [1])
 ```
 
-#### 4. The `/btw` Side-Channel Query
-Ask off-topic questions without corrupting your research session history or triggering vector searches:
+### CLI Evaluation Flags (`evaluate.py`)
+
+```bash
+python evaluate.py               # Auto-resume incomplete cases & mid-case metrics
+python evaluate.py --case 10     # Force re-run Case 10 only
+python evaluate.py --start 1 --end 5
+python evaluate.py --reset       # Archive eval_results.json + eval_logs/ and restart from Case 1
 ```
-User: /btw What is the current stock price of Nvidia?
-Assistant: [Streams answer via real-time Tavily search]
-Caption: Side channel — not saved to session history.
-```
+*(No HTTP REST API exists. [`main.py`](main.py) is a minimal `"Hello from papeer!"` stub left from initial scaffolding.)*
 
 ---
 
-## ⚙️ Configuration
+## 🔧 Configuration
 
-Key operational constants across the pipeline:
-
-| File | Parameter | Default | Effect of Modification |
-|:---|:---|:---:|:---|
-| [`backend/paper_loader.py`](backend/paper_loader.py) | `CHUNK_SIZE` | `1000` | Target character size for text splitter. Larger values provide broader context per chunk but increase embedding dilution. |
-| [`backend/paper_loader.py`](backend/paper_loader.py) | `CHUNK_OVERLAP` | `200` | Sliding window character overlap between adjacent chunks. |
-| [`backend/vector_store.py`](backend/vector_store.py) | `EMBEDDING_DIM` | `384` | Dimensionality of `sentence-transformers/all-MiniLM-L6-v2`. |
-| [`backend/rag_graph.py`](backend/rag_graph.py) | `MAX_RETRIEVAL_ATTEMPTS` | `3` | Maximum number of vector or web searches the agent can execute per turn before termination. |
-| [`backend/rag_graph.py`](backend/rag_graph.py) | Max Rewrites | `1` | Maximum number of query rewrite iterations allowed when chunks fail relevancy checks. |
-| [`backend/rag_graph.py`](backend/rag_graph.py) | Context Truncation | `8000` | Character ceiling for retrieved context passed to the answer generation LLM. |
-| [`evaluate.py`](evaluate.py) | `METRIC_THRESHOLD` | `0.7` | Passing threshold for DeepEval evaluation metrics. |
+| File | Constant / Setting | Default | Effect of Changing |
+| :--- | :--- | :---: | :--- |
+| [`backend/paper_loader.py`](backend/paper_loader.py) | `CHUNK_SIZE` | `800` | Target character window per chunk; smaller values increase granularity, larger values increase chunk breadth. |
+| [`backend/paper_loader.py`](backend/paper_loader.py) | `CHUNK_OVERLAP` | `150` | Character overlap preserving sentences across chunk boundaries. |
+| [`backend/vector_store.py`](backend/vector_store.py) | `EMBEDDING_DIM` | `384` | Vector size matching `all-MiniLM-L6-v2` (must match if swapping embedding models). |
+| [`backend/vector_store.py`](backend/vector_store.py) | `RRF_K` | `60` | Reciprocal Rank Fusion smoothing constant merging dense and BM25 rankings. |
+| [`backend/vector_store.py`](backend/vector_store.py) | `MAX_IN_MEMORY_SESSIONS` | `10` | Max BM25 indices cached simultaneously in RAM before LRU eviction to disk. |
+| [`backend/vector_store.py`](backend/vector_store.py) | `fetch_k` / `top_k` / `min_score` | `15` / `4` / `0.20` | Candidate pool size (`fetch_k`), default `hybrid_search` return count (`top_k`), and FlashRank score threshold (`min_score`, always keeps top 2). |
+| [`backend/rag_graph.py`](backend/rag_graph.py) | `LLM_GEN` / `LLM_FAST` | `openai/gpt-oss-120b` / `20b` | Overridable via `PAPEER_LLM_GEN` / `PAPEER_LLM_FAST` env vars. |
+| [`backend/rag_graph.py`](backend/rag_graph.py) | `_GEN_TIMEOUT` / `_FAST_TIMEOUT` | `45`s / `20`s | Groq API request timeout per tier. |
+| [`backend/rag_graph.py`](backend/rag_graph.py) | `MAX_RETRIEVAL_ATTEMPTS` | `3` | Hard cap on agent tool iterations per turn before forcing synthesis. |
+| [`backend/rag_graph.py`](backend/rag_graph.py) | Rewrite limit (`rewrite_count < 1`) | `1` | Max query rewrites when `relevancy_check` returns `False`. |
+| [`backend/rag_graph.py`](backend/rag_graph.py) | `raw_context[:6500]` | `6500` chars | Maximum serialized citation context passed into `generate_answer_node`. |
+| [`evaluate.py`](evaluate.py) | `METRIC_THRESHOLD` / `JUDGE_MODEL` | `0.70` / `openai/gpt-oss-20b` | DeepEval pass cutoff and judge model; sleeps up to `480s` automatically on 429s before clean exit. |
+| [`.streamlit/config.toml`](.streamlit/config.toml) | `fileWatcherType` | `"none"` | Disables Streamlit file watcher so Torch/HuggingFace module reloads don't crash/slow runtime. |
 
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 research-assistant-agentic-rag/
-├── app.py                          # Streamlit web UI, multi-session state, and graph streaming loop
-├── streamlit_secrets_bridge.py     # Bridges st.secrets into os.environ for seamless cloud execution
-├── main.py                         # Standalone execution entrypoint
-├── download_model.py               # Pre-caches sentence-transformers weights locally
-├── evaluate.py                     # DeepEval automated evaluation script using GroqJudge
-├── goldens.json                    # 10 synthetic Q&A evaluation pairs for OpenClaw Research Report
-├── eval_results.json               # Full telemetry, metric scores, and reasoning from evaluation runs
-├── Dockerfile                      # Production container recipe for headless Streamlit execution
-├── requirements.txt                # Pinned production Python dependencies
-├── requirements_streamlit.txt      # Lightweight requirements tailored for Streamlit Community Cloud
-├── runtime.txt                     # Explicit Python version pin (python-3.12)
-├── pyproject.toml                  # Project metadata and lock configurations
-├── sessions.json                   # Local metadata store for chat session IDs and titles
-├── graph.png                       # Exported visualization of compiled LangGraph workflow
-├── router_graph.png                # Visualization of routing logic
-├── backend/                        # Core agentic and data backend package
-│   ├── __init__.py                 # Package initialization
-│   ├── rag_graph.py                # LangGraph definition, nodes, conditional edges, and fallbacks
-│   ├── vector_store.py             # Qdrant client (:memory:), CacheBackedEmbeddings, and search API
-│   ├── paper_loader.py             # Document parsers (PDF, TXT, MD, URL, ArXiv API) and splitters
-│   ├── btw_handler.py              # Off-topic /btw side channel router and streaming generator
-│   └── models.py                   # Pydantic structured output models for router, judge, and claims
-├── documents/                      # Local document storage
-│   └── Openclaw_Research_Report.pdf# 940 KB benchmark report used for DeepEval evaluation
-├── embedding_cache/                # Disk cache for dense embeddings generated at runtime (git-ignored)
-└── .streamlit/
-    ├── config.toml                 # Server configuration (fileWatcherType = "none")
-    └── secrets.toml.example        # Reference template for required API secrets
+├── app.py                              # Streamlit entrypoint, session sidebar, ingestion deck, streaming runner
+├── streamlit_secrets_bridge.py         # Copies st.secrets -> os.environ on startup
+├── backend/
+│   ├── __init__.py                     # Backend package marker
+│   ├── rag_graph.py                    # 8-node LangGraph StateGraph, tools, contextualizer, router & caps
+│   ├── vector_store.py                 # Qdrant (Cloud/:memory:), BM25 + .pkl LRU, RRF, FlashRank & pruning
+│   ├── paper_loader.py                 # pymupdf4llm / PyMuPDFLoader, WebBaseLoader, ArXiv Atom API loaders
+│   ├── btw_handler.py                  # Isolated /btw router & Groq streaming generator
+│   └── models.py                       # Pydantic v2 structured-output schemas
+├── ui/
+│   ├── __init__.py                     # Exports UI cockpit helpers and CSS injector
+│   ├── components.py                   # HUD bar, citation drawer, claim verdict card, telemetry, .md export
+│   └── styles.py                       # Dark Palantir/Linear/Vercel CSS tokens & component overrides
+├── documents/
+│   └── Openclaw_Research_Report.pdf    # 34-page (940 KB) evaluation benchmark PDF
+├── assets/
+│   ├── liquid_chrome_silver.jpg        # Unused legacy UI visual asset
+│   └── liquid_chrome_vortex.jpg        # Unused legacy UI visual asset
+├── .devcontainer/
+│   └── devcontainer.json               # Codespaces / Dev Container config (Python 3.11, port 8501)
+├── .streamlit/
+│   ├── config.toml                     # Disables Streamlit file watcher
+│   └── secrets.toml.example            # Template for Streamlit Cloud secrets
+├── evaluate.py                         # Active resumable DeepEval harness with mid-case checkpointing
+├── goldens.json                        # 10 synthetic technical Q&A benchmark cases
+├── eval_results.json                   # Completed 10/10 DeepEval scores (Nov 10-11, 2026)
+├── Dockerfile                          # Container build file (python:3.12; needs ui/ copy fix — see Roadmap)
+├── requirements.txt                    # Primary pip dependency list
+├── requirements_streamlit.txt          # Older Streamlit dependency subset (missing flashrank/bm25/pymupdf4llm)
+├── runtime.txt                         # python-3.12 pin
+├── pyproject.toml                      # PEP 621 manifest & dependency snapshot
+├── .python-version                     # Lists 3.14 (conflicts with runtime.txt/venv 3.12)
+├── .env.example                        # Local env var template (GROQ_API_KEY, TAVILY_API_KEY)
+├── download_model.py                   # Pre-caches sentence-transformers/all-MiniLM-L6-v2 locally
+├── sessions.json                       # Local session IDs, creation timestamps, and generated titles
+├── main.py                             # Unused "Hello from papeer!" starter stub
+├── graph.png / router*.png             # Pre-contextualizer LangGraph visualizations from commit 4da8145
+└── [legacy eval files]                 # eval_6_to_10.py, eval_resume.py, evaluate_cached_cases.py,
+                                        # pregenerate_rag_cases.py, run_case_by_case.py, eval_rag_cache.json,
+                                        # eval_results_6_to_10.json
 ```
 
 ---
@@ -531,172 +619,145 @@ research-assistant-agentic-rag/
 ## ☁️ Deployment
 
 ### Current Deployment: Streamlit Community Cloud
-- **Live URL:** [papeer-rag-research-assistant.streamlit.app](https://papeer-rag-research-assistant.streamlit.app)
-- **Hosting Tier:** Streamlit Community Cloud (Free container runner).
-- **Secrets Setup:** Configured under **App Settings → Secrets**:
-  ```toml
-  GROQ_API_KEY = "gsk_..."
-  TAVILY_API_KEY = "tvly-..."
-  ```
 
-### Previous Deployment: Docker Container on AWS
-The application was previously containerized and deployed to an AWS EC2 instance.
+- **URL:** [papeer-rag-research-assistant.streamlit.app](https://papeer-rag-research-assistant.streamlit.app)
+- **Entrypoint:** [`app.py`](app.py)
+- **Secrets Configuration:** Set `GROQ_API_KEY`, `TAVILY_API_KEY` (and optional `QDRANT_URL`, `QDRANT_API_KEY`) in Streamlit Cloud **Settings → Secrets** matching [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example).
+- **Important Fork / Dependency Note:** Ensure Streamlit Community Cloud installs from [`requirements.txt`](requirements.txt) (NOT the older [`requirements_streamlit.txt`](requirements_streamlit.txt), which omits `rank-bm25`, `flashrank`, `pymupdf`, `pymupdf4llm`, `torch`, and `torchvision`).
 
-#### Building and Running the Docker Container Locally
+### Previous Deployment: Docker (AWS)
+
+The repository contains [`Dockerfile`](Dockerfile) (`FROM python:3.12`, exposing port `8501`) from its earlier containerized Docker deployment referenced in commit `e79a727`.
+
+> **Important Build Note:** [`Dockerfile`](Dockerfile) was written before the November 7 UI modularization (`88de181`) and currently omits `COPY ui/ ui/`, `COPY assets/ assets/`, `COPY streamlit_secrets_bridge.py .`, and `COPY .streamlit/ .streamlit/`. Add those `COPY` lines before building; otherwise `app.py` will fail at import time with `ModuleNotFoundError`.
+
 ```bash
-# Build the container
+# Once ui/ and streamlit_secrets_bridge.py COPY lines are added to Dockerfile:
 docker build -t papeer:latest .
-
-# Run container in headless mode on port 8501
-docker run -d \
-  -p 8501:8501 \
-  -e GROQ_API_KEY="gsk_..." \
-  -e TAVILY_API_KEY="tvly-..." \
-  --name papeer-app \
-  papeer:latest
+docker run -d -p 8501:8501 \
+  -e GROQ_API_KEY="gsk_your_key" \
+  -e TAVILY_API_KEY="tvly_your_key" \
+  --name papeer-app papeer:latest
 ```
 
 ---
 
-## ⚡ Performance & Cost
+## 📈 Performance & Cost
 
-### Measured Latencies & Hardware Profiles
-- **Vector Search Latency:** $< 2\text{ ms}$ query latency for in-memory cosine search across typical paper chunk sizes ($50$–$500$ vectors).
-- **Embedding Generation:**
-  - *First Encounter:* $\approx 45\text{ ms}$ per chunk on CPU.
-  - *Cache Hit:* $< 0.1\text{ ms}$ retrieved directly from `LocalFileStore`.
-- **Groq Inference Latency:** $\approx 300$–$800\text{ ms}$ Time-To-First-Token (TTFT) on Groq LPUs (`openai/gpt-oss-120b`).
-- **Tavily Web Search:** $\approx 1.2$–$2.0\text{ s}$ per web search invocation.
+All numbers below come directly from [`eval_results.json`](eval_results.json), [`backend/`](backend/), and local filesystem inspection:
 
-### Financial Footprint
-- **Infrastructure Cost:** **$0.00 / month** on present configuration.
-  - Streamlit Community Cloud: Free public tier.
-  - Groq Cloud: Free developer tier (subject to requests-per-minute rate limits).
-  - Tavily Search: Free tier (1,000 queries / month).
+- **Measured RAG Query Latency (`eval_results.json`, 10 queries against Qdrant Cloud + Groq + CPU FlashRank):**
+  - Min: **`9.15s`** · Mean: **`11.08s`** · Max: **`16.84s`** (mean `4.1` chunks returned, min `2`, max `5`).
+- **Measured DeepEval Judge Latency (`20B` serialized via `Semaphore(1)`):**
+  - Unthrottled single metric duration: **`6.5s` – `70.0s`** (`Case 1`–`Case 7`).
+  - Throttled single metric duration (including automated Groq `429` cooldown sleeps): up to **`782.77s`** (`AnswerRelevancyMetric`, `Case 10`).
+- **Local Footprint on Disk:**
+  - Cached FlashRank ONNX model (`ms-marco-MiniLM-L-12-v2`): **`32.9 MiB`** (`34,480,143` bytes / `34.48 MB` across 13 files in `embedding_cache/flashrank/`).
+  - Cached chunk/query embedding files: `528` entries in `embedding_cache/` alongside `documents/Openclaw_Research_Report.pdf` (`940,600` bytes).
+- **API Tier Quotas & Hosting Footprint:**
+  - Groq `openai/gpt-oss-20b` enforced an **`8,000 TPM`** limit and **`200,000 TPD`** rolling daily ceiling (`~139 tokens/min` observed refill near capacity during Case 10 evaluation).
+  - Engineered to run within developer free tiers across Groq, Tavily, Streamlit Community Cloud, and optional Qdrant `:memory:` mode (with no billing/invoice telemetry committed in the repository).
 
 ---
 
-## 🗺️ Roadmap & Future Scope
+## 🚀 Roadmap & Future Scope
 
-### Near-Term (Days)
-- [x] **Fix Package Initialization:** Renamed `backend/___inti__.py` to `backend/__init__.py`.
-- [ ] **Align Evaluation Signature:** Update [`evaluate.py`](evaluate.py) to remove the unsupported `db_path` parameter passed to `build_graph()`.
-- [ ] **Add Unit Test Suite:** Create a `tests/` directory with `pytest` unit tests for PDF loaders, arXiv regex extraction, and Pydantic schema validation.
-
-### Mid-Term (Weeks)
-- [ ] **Cross-Encoder Re-Ranking:** Integrate a lightweight local reranker (`cross-encoder/ms-marco-MiniLM-L-6-v2`) to filter out tangentially related chunks, directly resolving the **0.6069 Contextual Relevancy** bottleneck identified in evaluation.
-- [ ] **Persistent Vector Storage:** Provide an optional configuration switch to connect to a managed Qdrant Cloud cluster via `QDRANT_URL` and `QDRANT_API_KEY`, preserving paper indices across worker restarts.
-- [ ] **Multi-Turn Conversational Co-Reference:** Implement a lightweight query contextualizer node that resolves pronouns (e.g., "what about its latency?") using past conversation history before routing.
-
-### Long-Term (Research / Scale)
-- [ ] **Multi-Modal Document Parsing:** Support extraction of complex scientific diagrams, tables, and charts using vision models.
-- [ ] **True Token Streaming across Graph Nodes:** Migrate graph execution to stream intermediate node thoughts and token deltas directly to the UI using LangGraph async event streams (`astream_events`).
+- **Near-Term (Days — Repo Hygiene & Bug Fixes)**
+  - **Fix `Dockerfile` & `requirements_streamlit.txt`:** Add `COPY ui/`, `COPY streamlit_secrets_bridge.py`, `COPY .streamlit/`, and sync `flashrank`/`rank-bm25`/`pymupdf4llm` into `requirements_streamlit.txt` so container & cloud builds match `app.py`. *(Addresses Deployment drift)*
+  - **Route & Verify Using Contextualized Query:** Update `router_node` and `verify_claim_node` in [`backend/rag_graph.py`](backend/rag_graph.py) to read `state["query"]` instead of `state["messages"][-1].content` so pronoun resolution applies uniformly to all 3 branches. *(Addresses Contextualizer bypass on routing/claims)*
+  - **Update Stale Hero HUD Metric Text:** Update [`ui/components.py`](ui/components.py#L13) (`DEEPEVAL 84.4% PRECISION · QDRANT IN-MEMORY`) to match Qdrant Cloud/hybrid support and current `100%` precision (`eval_results.json`), plus add a UI session-delete button calling `cleanup_session()`. *(Addresses stale UI copy & orphaned vector cleanup)*
+- **Mid-Term (Weeks — Quality, Testing & Persistence)**
+  - **Automated `pytest` Suite & GitHub Actions CI:** Move local integration assertions from `scratch/test_all_additions.py` into `tests/` with mocked Groq/Tavily unit tests (`paper_loader`, `vector_store`, `rag_graph` routing caps) and add `.github/workflows/ci.yml` + `ruff`. *(Addresses missing test/CI coverage)*
+  - **Adaptive Retrieval Depth (`k`):** Scale `k` (`6–8`) for multi-aspect comparative prompts instead of fixed `k=4/5`, plus tune FlashRank score cutoffs/chunking to eliminate remaining low-relevancy peripheral chunks. *(Addresses Case 1 & 4 Recall `0.50` and Cases 1/3/7/10 Contextual Relevancy)*
+  - **Persistent Conversation Checkpointer:** Wire LangGraph `SqliteSaver` (`langgraph-checkpoint-sqlite` is already in `requirements.txt`) or PostgreSQL checkpointing instead of volatile RAM `MemorySaver`. *(Addresses conversation history loss on server restart)*
+- **Long-Term (Research & Scale)**
+  - **Multi-Tenant Auth & Per-User Isolation:** Add authentication before exposing shared `sessions.json` or Qdrant collections across multiple users. *(Addresses single-tenant open access trade-off)*
+  - **Full-Document Multimodal / OCR Extraction:** Enable OCR / table-image extraction (`RapidOCR` / vision parsing) for scanned research PDFs that lack selectable text layers. *(Addresses current non-OCR scope boundary)*
+  - **Multi-Paper Golden Evaluation Set:** Expand [`goldens.json`](goldens.json) from `10` queries on 1 PDF to `50+` queries spanning multiple papers, claim verification assertions, and latency/token tracking per node.
 
 ---
 
 ## ❓ FAQ / How It Works in Plain English
 
-#### 1. Why does Papeer use an in-memory vector store instead of a cloud database?
-Streamlit Community Cloud frequently blocks custom outbound ports or introduces latency connecting to external vector databases. Running Qdrant in-memory (`:memory:`) makes the application completely self-contained, lightning-fast, and trivial to fork and run without provisioning cloud databases.
+**1. Why use a graph (`LangGraph`) instead of a standard RAG chain?**
+A plain chain retrieves chunks once and generates even if those chunks are off-topic. LangGraph lets Papeer loop conditionally: check chunk relevance, rewrite the query if relevance fails, cap retries at 3 attempts, and route claims to web/arXiv fact-checking.
 
-#### 2. What happens if I upload multiple papers in one session?
-Chunks from all uploaded documents are stamped with their source title metadata and appended to that session's isolated Qdrant collection. The retrieval agent searches across all active session documents simultaneously.
+**2. Why combine Qdrant, BM25, and FlashRank instead of just Qdrant vector search?**
+Semantic vectors match concepts well but can miss exact numbers, acronyms, or tool names (`BM25Okapi` catches those). RRF merges both candidate lists (`15` + `15`), FlashRank (`ms-marco-MiniLM-L-12-v2`) scores each candidate deeply against the question on local CPU, and `prune_chunk_sentences` strips off-topic sentences inside each chunk.
 
-#### 3. How does the Claim Verification mode work?
-When a query is routed to `verify_claim`, the system bypasses the local vector store and launches two concurrent Tavily web searches: one general web query for recent superseding research, and one targeted specifically to `site:arxiv.org`. An LLM extracts up to 3 verified papers that update or refute the claim.
+**3. Do I need a Qdrant Cloud account to run Papeer?**
+No. If `QDRANT_URL` and `QDRANT_API_KEY` are omitted, [`backend/vector_store.py`](backend/vector_store.py) automatically falls back to `QdrantClient(":memory:")`.
 
-#### 4. Why does each conversational turn run under a fresh `thread_id`?
-LangGraph checkpoints maintain full message histories, including intermediate tool calls and lengthy context strings. If all turns share a single thread, the context window quickly becomes congested with old document chunks, degrading the model's ability to classify new intents. Starting fresh threads per turn keeps the prompt clean while the Streamlit UI preserves visual chat history.
+**4. Why does each chat turn use a new LangGraph `thread_id` (`{session_id}_turn_{turn}`)?**
+Replaying old tool calls and retrieved chunks in a single LangGraph thread quickly exceeds Groq's `8,000 TPM` rate limit. Isolating each turn's LangGraph thread while passing only the last `4` short UI messages (`chat_history[-4:]`) to `contextualize_query_node` preserves follow-up context cleanly within token limits.
 
-#### 5. What makes the `/btw` command different from regular chat?
-Standard queries run through the LangGraph state machine, invoke vector searches, update checkpoints, and record telemetry. The `/btw` handler bypasses the vector store and LangGraph completely, directly streaming a lightweight response to off-topic questions.
+**5. What happens when I prefix a message with `/btw`?**
+`app.py` intercepts `/btw` before LangGraph runs and streams directly from `backend/btw_handler.py` (`BtwRouteDecision` + optional 3-result Tavily web search). Neither `st.session_state.chats`, `MemorySaver`, nor Qdrant records the exchange.
 
-#### 6. Why did the project adopt `openai/gpt-oss-120b`?
-Earlier iterations using smaller models encountered frequent JSON/XML schema formatting errors during tool calling. Moving to `openai/gpt-oss-120b` on Groq resolved these parsing hangs while maintaining sub-second inference speeds.
+**6. How does Claim Verification avoid hallucinated citations?**
+`verify_claim_node` pulls `5` general web results and `5` `site:arxiv.org` results via Tavily, then instructs `openai/gpt-oss-20b` (`ClaimVerificationResult`) to output only verbatim titles and URLs from those search snippets, preferring `arxiv.org` links.
 
 ---
 
 ## 💼 Resume & Interview Kit
 
 <details>
-<summary><strong>Click to expand Resume Bullets, Walkthrough Script, and Interview Q&A</strong></summary>
+<summary><strong>Click to expand: Resume Bullets, Pitch Scripts, Hardest Problems Solved, Interview Q&A & Skills</strong></summary>
 
-### 📄 Resume Bullets
-- **Engineered an Agentic RAG Assistant (Papeer)** using **LangGraph**, **Groq**, and **Qdrant**, achieving **0.84 Contextual Precision** and **0.75 Answer Relevancy** across automated DeepEval benchmarks.
-- **Implemented self-correcting retrieval loops** featuring automated LLM relevancy evaluation, single-turn query reformulation, and strict termination caps (3 retrieval attempts) to prevent cyclic tool execution.
-- **Constructed an academic claim verification pipeline** integrating **Tavily API** and **ArXiv Atom XML services** to cross-examine research assertions against recent preprints and extract structured citations.
-- **Architected multi-session state isolation** with in-memory per-session Qdrant collections and disk-backed embedding caches (`CacheBackedEmbeddings`), reducing repeated chunk embedding latency from 45ms to <0.1ms.
+### Resume Bullets
 
----
+- **Architected a self-correcting Agentic RAG research assistant (`Papeer`)** using **LangGraph `1.1`**, **Groq (`openai/gpt-oss-120b`/`20b`)**, **Qdrant**, **BM25**, and **FlashRank**, improving DeepEval benchmark averages from `0.844` Precision / `0.622` Faithfulness (`Oct 2026` dense baseline) to **`1.000` Contextual Precision, `1.000` Faithfulness, `1.000` Answer Relevancy, `0.809` Recall, and `0.720` Contextual Relevancy** across 10 golden test cases (`goldens.json`, judged with `openai/gpt-oss-20b`).
+- **Engineered a 3-stage hybrid retrieval and citation pipeline** (`pymupdf4llm` Markdown chunking → Qdrant dense + `BM25Okapi` `.pkl` LRU cache fused via RRF `k=60` → local ONNX FlashRank cross-encoder reranking → extractive sentence pruning), achieving an `11.08s` mean end-to-end RAG latency across Qdrant Cloud & Groq.
+- **Built deterministic agent loop guardrails and live arXiv claim verification** integrating Pydantic v2 structured routing, dual Tavily (`web` + `site:arxiv.org`) fact-checking, pre-turn `thread_id` isolation for Groq's `8k TPM` limit, and an isolated streaming `/btw` side channel.
 
-### ⏱️ 30-Second Elevator Pitch
-> *"Papeer is an agentic research paper assistant built with LangGraph and Streamlit. Unlike standard RAG systems that blindly dump vector results into an LLM prompt, Papeer uses a self-correcting loop: an intent router categorizes queries, a tool-calling agent queries papers or the web, an evaluator checks chunk relevance, and a rewriter adjusts queries if retrieval fails. It also features automated claim verification against recent arXiv preprints and an isolated side channel for off-topic questions. Benchmarked with DeepEval, it achieves an 84.4% Contextual Precision on complex research reports."*
+### 30-Second Pitch
 
----
+> "Papeer is a self-correcting agentic RAG application I built on LangGraph and Streamlit for deep research paper Q&A and claim verification. Instead of naive single-shot cosine retrieval, it runs a three-stage pipeline—Qdrant dense search plus disk-cached BM25 fused with RRF, reranked locally with FlashRank ONNX, and pruned to high-signal sentences—inside a capped LangGraph loop that evaluates relevance and rewrites poor queries automatically. It also cross-checks claims against live arXiv preprints via Tavily and isolates off-topic `/btw` questions from research state. On a 10-case DeepEval benchmark, upgrading to hybrid retrieval and FlashRank lifted Faithfulness from 62% to 100% and Contextual Precision from 84% to 100%."
 
-### 🎙️ 2-Minute Technical Walkthrough Script
-> *"When building RAG for academic research, you run into three primary failure modes: first, dense retrieval returns topically related noise; second, preprints get superseded by newer findings; and third, off-topic chat pollutes document context.*
+### 2-Minute Walkthrough Script
+
+> "When you query research PDFs with basic RAG, three things break: dense vectors miss exact technical symbols and drag in noisy surrounding sentences, bad retrievals never self-correct, and follow-up or off-topic chat pollutes the prompt window.
 >
-> *To solve this, I designed Papeer around LangGraph. Ingestion supports PDFs, raw text, web URLs, and direct ArXiv downloads via its Atom XML API. Text is chunked and embedded into an in-memory Qdrant collection isolated by session ID, backed by a disk cache to prevent redundant embedding computation.*
+> In Papeer, ingestion starts in `paper_loader.py` using `pymupdf4llm` to preserve Markdown headers and page coordinates in `800`-character chunks. Those chunks are embedded once via `CacheBackedEmbeddings` into per-session Qdrant collections (Cloud or `:memory:` fallback) alongside disk-persisted `BM25Okapi` indices managed by a 10-session RAM LRU cache.
 >
-> *When a query arrives, a router classifies it into document retrieval, claim verification, or direct answer. If retrieval is selected, an agent node calls vector search or Tavily web search. The retrieved passages pass to an LLM relevancy judge. If relevant, the answer is synthesized. If irrelevant, a query rewrite node reformulates the search keywords and retries retrieval. To protect against edge cases, I implemented hard caps: max 3 retrieval attempts, max 1 rewrite, and an 8,000-character context ceiling.*
+> On each turn in `app.py`, `rag_graph.py` first runs a fast `20B` contextualizer over the last 4 UI messages to resolve pronouns, then routes via `120B` across `retrieve`, `verify_claim`, or `direct_answer`. On `retrieve`, a tool-calling `120B` agent runs 3-stage hybrid search (`Qdrant + BM25 -> RRF -> FlashRank -> sentence pruning`) or live Tavily web search, capped at 3 attempts before a `20B` relevancy judge decides whether to synthesize grounded `[1], [2]` citations or rewrite the query once. Meanwhile, `/btw` bypasses LangGraph completely via `btw_handler.py`.
 >
-> *For claim checking, the system queries the live web and arXiv domain, formatting superseding literature into structured Pydantic models. For off-topic questions, a `/btw` side channel bypasses the graph entirely.*
->
-> *I evaluated the system using DeepEval against a 940KB technical report. It demonstrated strong Contextual Precision at 84.4%, while highlighting a 60.7% Contextual Relevancy bottleneck that I've mapped to our next milestone: adding a cross-encoder re-ranking stage."*
+> Benchmarking with DeepEval `4.0` on a 34-page technical report drove our biggest upgrades: raising Faithfulness from `0.6217` to `1.0000`, Answer Relevancy from `0.7488` to `1.0000`, and Contextual Relevancy from `0.6069` to `0.7202`."
 
----
+### 3 Hardest Technical Problems Solved
 
-### 🛠️ The 3 Hardest Technical Problems Solved
+1. **Infinite Retrieval Loops After Malformed LLM Tool Calls (`6fcb905`)**
+   - *Root Cause:* When Groq occasionally emitted invalid tool-call XML/JSON, `agent_node`'s exception handler injected a synthetic `retrieve_from_vectorstore` `AIMessage` fallback. However, `agent_routing` evaluated `tools_condition(state)` *before* checking `retrieval_attempts`, causing the fallback tool call to loop endlessly back into `retrieval`.
+   - *Fix:* Reordered `agent_routing` ([`backend/rag_graph.py`](backend/rag_graph.py#L515-L523)) to check `retrieval_attempts >= MAX_RETRIEVAL_ATTEMPTS` *before* `tools_condition`, forcing transition to `generate_answer` once capped.
+2. **Groq Model Deprecation Hangs & Tool-Schema Failures (`da71fa4`, `8ed94f1`, router upgrade)**
+   - *Root Cause:* Earlier use of `llama-3.1-8b-instant` hung on deprecated endpoints, and small routing/tool models misfired on structured JSON schemas.
+   - *Fix:* Split workloads cleanly across active Groq LPU models (`openai/gpt-oss-120b` for routing, tool planning, and synthesis; `openai/gpt-oss-20b` for lightweight classification/contextualization) with `45s`/`20s` timeouts and explicit fallback handlers.
+3. **DeepEval `429` Bursts & `400 json_validate_failed` Truncation Under `8k TPM` / `200k TPD` (`evaluate.py`)**
+   - *Root Cause:* DeepEval's parallel `a_generate` calls triggered instant Groq `429` crashes, and `openai/gpt-oss-20b`'s internal reasoning tokens truncated JSON judgments at `max_tokens=2048` (`400 json_validate_failed`).
+   - *Fix:* Serialized calls with `asyncio.Semaphore(1)` + `2.0s` spacing, raised `max_tokens=4096` with `400` retries, parsed exact Groq `"try again in XmYs"` durations (`_extract_wait_seconds`), and implemented both per-case logs and mid-case `case_XX_partial.json` metric checkpointing.
 
-#### 1. Infinite Retrieval Loops Caused by LLM Tool-Call Formatting Failures
-- **Root Cause:** When smaller models on Groq occasionally failed tool call schema validation, an exception handler caught the error and injected a fallback `AIMessage` with a synthetic tool call. However, the graph's conditional edge evaluated `tools_condition` before checking attempt counts, causing the fallback tool call to re-route into retrieval indefinitely.
-- **The Fix:** Reordered the routing logic in `agent_routing` to evaluate `retrieval_attempts >= MAX_RETRIEVAL_ATTEMPTS` before calling `tools_condition`. If capped, the graph forces immediate transit to answer generation.
+### Likely Interview Questions & Grounded Answers
 
-#### 2. Model Deprecation Hangs on Groq
-- **Root Cause:** Initial prototypes relied on `llama-3.1-8b-instant`, which was deprecated on Groq, causing silent timeouts and interface freezes. Subsequent attempts with intermediate models suffered from XML tag hallucinations during structured tool extraction.
-- **The Fix:** Upgraded the primary pipeline to `openai/gpt-oss-120b` for agent reasoning and `openai/gpt-oss-20b` for lightweight utility tasks, while adding explicit 30-second timeouts and schema validation fallbacks.
+1. **Why use LangGraph over a linear LCEL chain?**
+   Linear DAGs cannot cleanly loop back when retrieved chunks fail validation. LangGraph gives explicit conditional edges (`relevancy_check` → `query_rewrite` → `agent_node`), attempt caps, and per-turn checkpoint state inspection.
+2. **How did you push Contextual Precision to `1.00` and Faithfulness from `0.62` to `1.00`?**
+   Four concrete changes from commit `4da8145` to today: structure-aware `pymupdf4llm` chunking (`[Paper | Section | Page]` headers, `800`/`150`), Qdrant + BM25 RRF fusion, FlashRank `ms-marco-MiniLM-L-12-v2` reranking + sentence pruning, and strict numbered inline-citation prompting in `generate_answer_node` (`raw_context[:6500]`).
+3. **Why is `ContextualRelevancyMetric` still `0.7202` (`4/10` failing cases) when Precision is `1.00`?**
+   Precision checks whether relevant chunks rank above irrelevant ones (`1.00`), whereas Contextual Relevancy scores the fraction of *individual sentences* across retrieved chunks that directly answer the question. Even after `75%` extractive sentence pruning, multi-chunk results (`k=5` in Cases 1 & 3) still carry adjacent report commentary.
+4. **Why split threads per turn (`{sid}_turn_{n}`) if LangGraph has built-in `MessagesState`?**
+   Re-sending multi-turn tool calls and `6,500`-char retrieval blocks exceeds Groq's `8,000 TPM` limit. Passing only the last `4` short UI messages to `contextualize_query_node` keeps token count low while resolving follow-up pronouns.
+5. **How does your BM25 store scale if many sessions are created?**
+   It uses an `OrderedDict` LRU capped at `MAX_IN_MEMORY_SESSIONS = 10` in RAM and pickles inactive session indices to `./embedding_cache/bm25/`.
+6. **What happens if FlashRank fails or `QDRANT_URL` is unreachable at startup?**
+   `rerank_documents()` catches exceptions and falls back to RRF ordering (`docs[:top_k]`). `QdrantClient` only connects remotely when both `QDRANT_URL` and `QDRANT_API_KEY` are set, otherwise initializing `:memory:`. Startup still initializes `HuggingFaceEmbeddings` for `all-MiniLM-L6-v2`, requiring cached weights or HuggingFace access on cold boot.
+7. **What happens right now if a follow-up question uses a pronoun like "Compare *its* latency" on `verify_claim` or `router`?**
+   Honest gap in current code: `contextualize_query_node` updates `state["query"]`, while `router_node` and `verify_claim_node` read `state["messages"][-1].content` (original unrewritten message), so `agent_node` fallback/`relevancy_check`/`generate_answer` see the resolved query while the router sees the raw prompt. Harmonizing those two lines is item #2 on the near-term roadmap.
+8. **What would you change first when scaling this beyond a single-user demo?**
+   Replace `MemorySaver` with `SqliteSaver`/`PostgresSaver`, add user authentication before sharing `sessions.json`/Qdrant namespaces, update the `Dockerfile` `COPY` steps for `ui/` + `streamlit_secrets_bridge.py`, and add a mocked `pytest` CI pipeline before commits.
 
-#### 3. DeepEval Rate-Limit Crashes During Evaluation
-- **Root Cause:** DeepEval's default evaluation executes test cases and metric assessments asynchronously in parallel. This instantly triggered 429 Too Many Requests errors on Groq's free-tier rate limits, causing test runs to abort mid-suite.
-- **The Fix:** Re-architected `evaluate.py` to execute synchronously, wrapping metric evaluation in a custom `GroqJudge` with 6 retry loops, exponential sleep backoffs (10–60s), and incremental JSON persistence to disk after each question.
+### Skills Demonstrated
 
----
-
-### 💬 8 Interview Questions & Deep-Dive Answers
-
-#### Q1: Why use LangGraph instead of standard LangChain chains?
-**Answer:** Standard sequential chains cannot handle conditional loops or recovery states. Papeer requires cyclical execution: retrieve $\to$ evaluate relevance $\to$ rewrite query $\to$ retry retrieval. LangGraph models this as a StateGraph with conditional edges and persistent checkpoints.
-
-#### Q2: What explains the gap between Contextual Precision (84.4%) and Contextual Relevancy (60.7%)?
-**Answer:** Contextual Precision measures whether the true positives among retrieved chunks are ranked at the top. It scored 84.4% because the best chunks were well-prioritized. Contextual Relevancy measures the signal-to-noise ratio within the retrieved chunks. Because our bi-encoder retrieves fixed 1,000-character windows, chunks often contain peripheral discussion, lowering the relevancy score. A cross-encoder reranker is planned to resolve this.
-
-#### Q3: Why is Qdrant run in-memory rather than persistent on disk or cloud?
-**Answer:** Streamlit Community Cloud runs ephemeral containers. Using `:memory:` ensures zero network dependencies, instant startup, and complete session isolation without firewall or port blocking complications.
-
-#### Q4: How does Papeer prevent prompt injection through uploaded PDFs?
-**Answer:** Retrieved chunks are injected strictly inside an isolated context block in the user message (`prompt = f"Answer the question using this context:\n\n{context}\n\nQuestion: {query}"`). System prompts instruct the model to answer solely from context and refuse ungrounded commands.
-
-#### Q5: What happens when an arXiv ID has version suffixes like `v2`?
-**Answer:** `backend/paper_loader.py` uses regex pattern `r"(\d{4}\.\d{4,5}(?:v\d+)?)"` to extract the ID, then runs `re.sub(r"v\d+$", "", id)` to strip the version suffix, ensuring stable resolution against the arXiv PDF endpoint.
-
-#### Q6: Why are graph thread IDs generated as `{session_id}_turn_{turn}` instead of just `{session_id}`?
-**Answer:** Appending the turn count isolates the checkpointer thread to a single user interaction. This prevents historical tool messages and raw document snippets from inflating token usage on subsequent questions.
-
-#### Q7: How does the `/btw` handler decide whether to search the web?
-**Answer:** It invokes `openai/gpt-oss-120b` structured with a Pydantic schema (`BtwRouteDecision`). The prompt evaluates whether the question requires real-time knowledge (e.g., weather, live prices) or general world knowledge.
-
-#### Q8: What would you do differently if rebuilding this system for enterprise scale?
-**Answer:** I would replace in-memory Qdrant with a managed hybrid search engine (BM25 + Dense HNSW), add a cross-encoder reranking stage, implement asynchronous token streaming via `astream_events`, and deploy on FastAPI with Redis-backed session management.
-
----
-
-### 🧰 Skills Demonstrated
-- **Agentic Workflow Architecture:** LangGraph, stateful computation graphs, cyclic control loops, tool binding.
-- **Retrieval-Augmented Generation (RAG):** Dense vector retrieval, hybrid web retrieval, chunking strategies, embedding caching.
-- **Evaluation & LLM-as-a-Judge:** DeepEval, synthetic golden dataset generation, metric calibration, failure-mode analysis.
-- **API & Systems Integration:** Groq LPUs, Tavily Search API, ArXiv Atom API, PyMuPDF.
-- **Production UI Development:** Streamlit, session management, telemetry panels, dynamic streaming.
+Agentic Workflows (LangGraph `StateGraph`, tool binding, cyclic loop control) · Hybrid RAG Engineering (Qdrant dense vectors, `BM25Okapi`, Reciprocal Rank Fusion, FlashRank ONNX cross-encoder reranking, extractive sentence pruning) · Document Parsing (`pymupdf4llm`, PyMuPDF, arXiv Atom XML, BeautifulSoup) · LLM Reliability Engineering (Pydantic v2 structured outputs, Groq TPM/TPD backoff, timeouts & fallback recovery) · Systematic Evaluation (DeepEval `4.0.0`, synthetic golden datasets, failure-mode iteration) · Frontend & Container Tooling (Streamlit UI components/CSS design system, Docker).
 
 </details>
 
@@ -705,88 +766,74 @@ Earlier iterations using smaller models encountered frequent JSON/XML schema for
 ## 📦 Project Context Block
 
 <details>
-<summary><strong>Click to expand Project Context Block (YAML)</strong></summary>
+<summary><strong>Click to expand: Compact PROJECT_CONTEXT YAML (Copy-Paste Ready)</strong></summary>
 
 ```yaml
-project:
-  name: "Papeer — Agentic Research Paper Assistant"
-  tagline: "LangGraph-powered agentic RAG for paper analysis, self-correcting retrieval, and academic claim verification"
-  author: "dummycodertech"
-  status: "Deployed / Production"
-  urls:
-    live_demo: "https://papeer-rag-research-assistant.streamlit.app"
-    github_repo: "https://github.com/dummycodertech/research-assistant-agentic-rag"
-    architecture_map: "https://gitdiagram.com/dummycodertech/research-assistant-agentic-rag"
+name: "Papeer"
+one_liner: "Self-correcting LangGraph agentic RAG assistant for research papers, claim verification, and isolated /btw side queries."
+repo: "https://github.com/dummycodertech/research-assistant-agentic-rag"
+branch: "master"
+author: "dummycodertech"
+status: "Active; 10/10 DeepEval suite verified Nov 10-11, 2026"
 architecture:
-  orchestration: "LangGraph 1.1.10 (StateGraph, MemorySaver checkpointer)"
-  llm_inference:
-    primary_model: "openai/gpt-oss-120b (via Groq LPUs, 30s timeout)"
-    utility_model: "openai/gpt-oss-20b (session naming, evaluation judge)"
-  vector_storage:
-    engine: "Qdrant Client 1.17.1 (in-memory, :memory:)"
-    collections: "Per-session collections (papeer_{session_id})"
-    distance_metric: "Cosine similarity"
-  embeddings:
-    model: "sentence-transformers/all-MiniLM-L6-v2 (384-dimensional)"
-    caching: "CacheBackedEmbeddings with LocalFileStore (./embedding_cache/)"
-  external_search: "Tavily Search API (web + site:arxiv.org)"
-  ingestion_loaders:
-    - "PyMuPDFLoader (PDF)"
-    - "TextLoader (TXT / Markdown)"
-    - "WebBaseLoader (HTML URLs)"
-    - "ArXiv Atom API + direct PDF download (ArXiv)"
-  text_splitting:
-    chunk_size: 1000
-    chunk_overlap: 200
-  guardrails:
-    max_retrieval_attempts: 3
-    max_query_rewrites: 1
-    max_context_characters: 8000
-    timeout_seconds: 30
-    fallback_on_tool_error: "Injects synthetic retrieve_from_vectorstore AIMessage"
-features:
-  - "Multi-source paper ingestion (PDF, TXT, MD, URL, ArXiv)"
-  - "Autonomous intent router (retrieve, verify_claim, direct_answer)"
-  - "Self-correcting retrieval loop (LLM relevancy evaluator + query rewriter)"
-  - "Superseding claim verification against recent scientific literature"
-  - "Isolated /btw side channel bypassing vector store and checkpointer"
-  - "Expandable graph state inspector displaying full JSON telemetry per turn"
-  - "Automated session naming via LLM"
+  orchestrator: "LangGraph 1.1.10 StateGraph (MemorySaver, turn-isolated thread_id={sid}_turn_{n})"
+  nodes:
+    - "contextualize_query (20B)"
+    - "router (120B, RouterDecision -> retrieve | verify_claim | direct_answer)"
+    - "agent_node (120B + retrieve_from_vectorstore, web_search; MAX_RETRIEVAL_ATTEMPTS=3)"
+    - "retrieval (ToolNode)"
+    - "relevancy_check (20B, RelevancyDecision)"
+    - "query_rewrite (20B, max 1 rewrite per turn)"
+    - "verify_claim (Tavily 5 general + 5 site:arxiv.org + 20B ClaimVerificationResult)"
+    - "generate_answer (120B, inline [1],[2] citations, raw_context[:6500])"
+  side_channel: "backend/btw_handler.py (BtwRouteDecision 120B + optional Tavily 3 hits, bypasses graph & vector store)"
+  retrieval_pipeline:
+    ingestion: "pymupdf4llm / PyMuPDFLoader / TextLoader / WebBaseLoader / ArXiv Atom API (CHUNK_SIZE=800, CHUNK_OVERLAP=150)"
+    embeddings: "sentence-transformers/all-MiniLM-L6-v2 (384-d) cached via CacheBackedEmbeddings -> ./embedding_cache/"
+    dense_store: "Qdrant 1.17.1 (Cloud via QDRANT_URL/QDRANT_API_KEY or :memory: fallback, collection=papeer_{sid})"
+    sparse_store: "BM25Okapi persisted to ./embedding_cache/bm25/*.pkl (MAX_IN_MEMORY_SESSIONS=10 LRU)"
+    fusion_and_rerank: "RRF (k=60, fetch_k=15) -> FlashRank ms-marco-MiniLM-L-12-v2 (min_score=0.20, min 2 kept) -> prune_chunk_sentences (75%)"
+  ui: "Streamlit 1.57.0 (app.py + ui/components.py + ui/styles.py + streamlit_secrets_bridge.py)"
+models:
+  generator_router_agent: "openai/gpt-oss-120b (Groq, timeout=45s, env PAPEER_LLM_GEN)"
+  auxiliary_and_judge: "openai/gpt-oss-20b (Groq, timeout=20s, env PAPEER_LLM_FAST)"
 evaluation:
-  framework: "DeepEval 4.0.0"
-  judge_model: "openai/gpt-oss-20b (GroqJudge with JSON output schema)"
-  pass_threshold: 0.70
-  test_dataset: "10 synthetic pairs from documents/Openclaw_Research_Report.pdf (goldens.json)"
-  measured_results:
-    contextual_precision: 0.8443 (80% pass)
-    answer_relevancy: 0.7488 (60% pass)
-    contextual_recall: 0.6885 (40% pass)
-    faithfulness: 0.6217 (40% pass)
-    contextual_relevancy: 0.6069 (20% pass)
-key_tradeoffs:
-  - "In-memory Qdrant eliminates cloud networking issues but loses indices on container restart"
-  - "Turn-isolated thread IDs prevent context window bloat but lose cross-turn co-reference"
-  - "Dense retrieval without reranker yields fast search but limits contextual relevancy to 60.7%"
+  script: "evaluate.py (DeepEval 4.0.0, GroqJudge openai/gpt-oss-20b, max_tokens=4096, Semaphore(1))"
+  dataset: "goldens.json (10 synthetic cases) on documents/Openclaw_Research_Report.pdf (34 pages, 116 chunks)"
+  run_dates: "2026-11-10 to 2026-11-11"
+  results_threshold_0_70:
+    contextual_precision: "1.0000 (10/10)"
+    contextual_recall: "0.8086 (8/10)"
+    contextual_relevancy: "0.7202 (6/10)"
+    answer_relevancy: "1.0000 (10/10)"
+    faithfulness: "1.0000 (10/10)"
+  rag_latency_sec: "min 9.15, avg 11.08, max 16.84"
+known_tradeoffs_and_gaps:
+  - "No LICENSE file, no tests/ pytest suite, no CI workflow"
+  - "Dockerfile missing COPY ui/, streamlit_secrets_bridge.py, .streamlit/, assets/"
+  - "router_node & verify_claim_node read raw messages[-1].content instead of contextualized state['query']"
+  - "MemorySaver + st.session_state chats are ephemeral across restarts; no UI delete calling cleanup_session"
 ```
 
 </details>
 
 ---
 
-## 📚 References, Acknowledgements & License
+## 📚 References, Acknowledgements, License & Author
 
-### Core References & Libraries
-- **LangGraph:** LangChain AI, *LangGraph: Building Language Agents as Graphs*, [github.com/langchain-ai/langgraph](https://github.com/langchain-ai/langgraph).
-- **Qdrant:** Qdrant Team, *Vector Search Engine*, [qdrant.tech](https://qdrant.tech).
-- **Groq:** Groq Inc., *LPU Inference Engine*, [groq.com](https://groq.com).
-- **Tavily:** Tavily AI, *Search API for LLMs*, [tavily.com](https://tavily.com).
-- **DeepEval:** Confident AI, *The Open-Source LLM Evaluation Framework*, [confident-ai.com](https://confident-ai.com).
-- **Sentence-Transformers:** Reimers & Gurevych, *Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks*, [sbert.net](https://www.sbert.net/).
+### References & Libraries
+
+- [LangGraph](https://github.com/langchain-ai/langgraph) & [LangChain](https://github.com/langchain-ai/langchain) — stateful graph orchestration, tool bindings, and document caching
+- [Qdrant](https://qdrant.tech/) — vector search engine (`qdrant-client`)
+- [FlashRank](https://github.com/PrithivirajDamodaran/FlashRank) (`ms-marco-MiniLM-L-12-v2`) & [`rank-bm25`](https://github.com/dorianbrown/rank_bm25) — hybrid lexical fusion and CPU ONNX reranking
+- [Sentence-Transformers](https://www.sbert.net/) (`all-MiniLM-L6-v2`) — dense embeddings
+- [PyMuPDF / `pymupdf4llm`](https://github.com/pymupdf/PyMuPDF) & [arXiv API](https://info.arxiv.org/help/api/) — structure-aware PDF parsing and preprint lookup
+- [Groq](https://groq.com/), [Tavily](https://tavily.com/), [Streamlit](https://streamlit.io/), and [DeepEval](https://docs.confident-ai.com/)
 
 ### License
-This project currently does not contain an explicit `LICENSE` file. All rights are reserved by the author. A permissive open-source license (such as MIT or Apache 2.0) is recommended prior to commercial distribution.
+
+No `LICENSE` file is currently present in this repository. All rights remain with the author unless an explicit open-source license is added.
 
 ### Author
-**dummycodertech**  
-- **GitHub:** [@dummycodertech](https://github.com/dummycodertech)
 
+**dummycodertech** — [GitHub Profile](https://github.com/dummycodertech)

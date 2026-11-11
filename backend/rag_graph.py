@@ -24,14 +24,14 @@ load_dotenv()
 
 # ── Model Configuration ────────────────────────────────────────────────────────
 # gpt-oss-120b: 8,000 TPM / 1,000 TPD (Groq on-demand tier)
-#   - Used for: RAG generation, agentic retrieval tool calls
+#   - Used for: RAG intent routing, generation, agentic retrieval tool calls
 #   - Context window: 128k tokens; we cap context at ~6,000 chars to stay safe
 # gpt-oss-20b: 8,000 TPM / 1,000 TPD (Groq on-demand tier)
-#   - Used for: routing, relevancy check, query rewrite (lightweight structured calls)
+#   - Used for: contextualizer, relevancy check, query rewrite (lightweight structured calls)
 #   - Faster + cheaper than 120b for deterministic classification tasks
 
-LLM_GEN   = "openai/gpt-oss-120b"   # generator  — high-quality answers
-LLM_FAST  = "openai/gpt-oss-20b"    # classifier — routing / relevancy / rewrites
+LLM_GEN   = os.getenv("PAPEER_LLM_GEN", "openai/gpt-oss-120b")   # generator  — high-quality answers
+LLM_FAST  = os.getenv("PAPEER_LLM_FAST", "openai/gpt-oss-20b")   # classifier — routing / relevancy / rewrites
 
 # Shared timeouts tuned for Groq's P95 latency at our tier
 _GEN_TIMEOUT  = 45   # seconds — 120b can be slow on long contexts
@@ -128,7 +128,7 @@ ROUTER_PROMPT = ChatPromptTemplate.from_messages([
     ("human", "{query}"),
 ])
 
-router_chain = ROUTER_PROMPT | llm_fast.with_structured_output(RouterDecision)
+router_chain = ROUTER_PROMPT | llm.with_structured_output(RouterDecision)
 
 
 def router_node(state: RAGState) -> dict:
